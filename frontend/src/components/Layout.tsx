@@ -53,18 +53,24 @@ export function Layout() {
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col font-sans">
       <header className="border-b border-neutral-800 bg-neutral-900/80 backdrop-blur px-6 py-4 flex items-center justify-between sticky top-0 z-50">
-        <div className="flex items-center">
+        <div className="flex items-center gap-3">
           <Link
             to="/"
             aria-label="BodhCode Home"
-            className="flex items-center hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-orange-500/50 rounded-lg p-0.5"
+            className="flex items-center gap-2.5 text-xl font-bold tracking-tight hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-orange-500/50 rounded-lg p-0.5"
           >
             <img
               src="/logo.png"
-              alt="BodhCode"
-              className="h-10 w-10 object-contain drop-shadow-[0_0_12px_rgba(249,115,22,0.35)] hover:scale-105 transition-transform"
+              alt="BodhCode Logo"
+              className="h-8 w-8 object-contain drop-shadow-[0_0_12px_rgba(249,115,22,0.35)] hover:scale-105 transition-transform"
             />
+            <span className="bg-gradient-to-r from-orange-400 to-amber-300 bg-clip-text text-transparent font-bold tracking-tight">
+              BodhCode
+            </span>
           </Link>
+          <span className="text-xs px-2 py-0.5 rounded-full bg-neutral-800 text-neutral-400 border border-neutral-700 font-mono">
+            v0.1.0-alpha
+          </span>
         </div>
 
         <div id="header-actions" className="flex items-center gap-4">
