@@ -1,0 +1,11 @@
+{
+  // Compiler options for project
+  "compilerOptions": {
+    "baseUrl": ".",
+    /* Paths mapping */
+    "paths": {
+      "@/*": ["src/*"],
+      "@components/*": ["src/components/*"],
+    },
+  },
+}

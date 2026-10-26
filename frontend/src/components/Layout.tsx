@@ -51,41 +51,42 @@ export function Layout() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
-      <header className="border-b border-slate-800 bg-slate-900/60 backdrop-blur px-6 py-4 flex items-center justify-between sticky top-0 z-50">
-        <div className="flex items-center gap-3">
+    <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col font-sans">
+      <header className="border-b border-neutral-800 bg-neutral-900/80 backdrop-blur px-6 py-4 flex items-center justify-between sticky top-0 z-50">
+        <div className="flex items-center">
           <Link
             to="/"
-            className="flex items-center gap-2.5 text-xl font-bold tracking-tight bg-gradient-to-r from-sky-400 to-indigo-400 bg-clip-text text-transparent hover:opacity-90 transition-opacity"
+            aria-label="BodhCode Home"
+            className="flex items-center hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-orange-500/50 rounded-lg p-0.5"
           >
-            <img src="/logo.png" alt="BodhCode Logo" className="w-7 h-7 rounded-md object-contain shadow-sm" />
-            <span>BodhCode</span>
+            <img
+              src="/logo.png"
+              alt="BodhCode"
+              className="h-10 w-10 object-contain drop-shadow-[0_0_12px_rgba(249,115,22,0.35)] hover:scale-105 transition-transform"
+            />
           </Link>
-          <span className="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700 font-mono">
-            v0.1.0-alpha
-          </span>
         </div>
 
         <div id="header-actions" className="flex items-center gap-4">
           {isLoading ? (
-            <div className="w-8 h-8 rounded-full bg-slate-800 animate-pulse" />
+            <div className="w-8 h-8 rounded-full bg-neutral-800 animate-pulse" />
           ) : user ? (
             <div className="relative" ref={menuRef}>
               <button
                 id="user-menu-btn"
                 onClick={() => setMenuOpen((prev) => !prev)}
-                className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500/50"
+                className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500/50"
                 aria-expanded={menuOpen}
                 aria-haspopup="true"
               >
                 <img
                   src={user.avatar_url}
                   alt={user.login}
-                  className="w-6 h-6 rounded-full border border-slate-700 object-cover"
+                  className="w-6 h-6 rounded-full border border-neutral-700 object-cover"
                 />
-                <span className="text-sm font-medium text-slate-200">{user.login}</span>
+                <span className="text-sm font-medium text-neutral-200">{user.login}</span>
                 <svg
-                  className={`w-3.5 h-3.5 text-slate-400 transition-transform ${menuOpen ? "rotate-180" : ""}`}
+                  className={`w-3.5 h-3.5 text-neutral-400 transition-transform ${menuOpen ? "rotate-180" : ""}`}
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -97,16 +98,16 @@ export function Layout() {
               {menuOpen && (
                 <div
                   id="user-menu-dropdown"
-                  className="absolute right-0 mt-2 w-48 py-1.5 bg-slate-900 border border-slate-800 rounded-lg shadow-xl z-50 backdrop-blur"
+                  className="absolute right-0 mt-2 w-48 py-1.5 bg-neutral-900 border border-neutral-800 rounded-lg shadow-xl z-50 backdrop-blur"
                 >
-                  <div className="px-3 py-2 border-b border-slate-800/80 text-xs">
-                    <p className="text-slate-400 font-medium">Signed in as</p>
-                    <p className="text-slate-200 font-semibold truncate">{user.login}</p>
+                  <div className="px-3 py-2 border-b border-neutral-800/80 text-xs">
+                    <p className="text-neutral-400 font-medium">Signed in as</p>
+                    <p className="text-neutral-200 font-semibold truncate">{user.login}</p>
                   </div>
                   <Link
                     to="/settings"
                     onClick={() => setMenuOpen(false)}
-                    className="block px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-slate-100 transition-colors"
+                    className="block px-3 py-2 text-sm text-neutral-300 hover:bg-neutral-800 hover:text-neutral-100 transition-colors"
                   >
                     Settings
                   </Link>
@@ -124,7 +125,7 @@ export function Layout() {
             <a
               id="github-login-btn"
               href={`${VITE_API_URL}/auth/github/login`}
-              className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-100 text-sm font-medium border border-slate-700 transition-all hover:border-slate-600 shadow-sm"
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold transition-all shadow-md shadow-orange-500/20 hover:scale-[1.02] active:scale-[0.98]"
             >
               <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
                 <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />

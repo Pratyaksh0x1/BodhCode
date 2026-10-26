@@ -87,19 +87,19 @@ export function Home() {
     return (
       <div className="py-12 px-4 max-w-4xl mx-auto space-y-12 text-center">
         <div className="space-y-6">
-          <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full border border-sky-500/30 bg-sky-950/30 text-sky-300 text-xs font-medium tracking-wide">
-            <span className="w-2 h-2 rounded-full bg-sky-400 animate-ping" />
+          <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full border border-orange-500/30 bg-orange-950/30 text-orange-300 text-xs font-medium tracking-wide">
+            <span className="w-2 h-2 rounded-full bg-orange-400 animate-ping" />
             Deterministic AST Dependency Graphs
           </div>
 
-          <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-slate-100 leading-tight">
+          <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-neutral-100 leading-tight">
             Understand any codebase{" "}
-            <span className="bg-gradient-to-r from-sky-400 via-indigo-300 to-purple-400 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-orange-400 via-amber-200 to-yellow-400 bg-clip-text text-transparent">
               with mathematical precision
             </span>
           </h1>
 
-          <p className="max-w-2xl mx-auto text-lg text-slate-400 leading-relaxed">
+          <p className="max-w-2xl mx-auto text-lg text-neutral-400 leading-relaxed">
             BodhCode turns TypeScript and JavaScript repositories into interactive dependency maps,
             explains architectural blast radius in your language, and enables verified in-browser code editing.
           </p>
@@ -108,7 +108,7 @@ export function Home() {
             <a
               id="hero-github-login-btn"
               href={`${VITE_API_URL}/auth/github/login`}
-              className="flex items-center justify-center gap-3 px-8 py-3.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-semibold shadow-lg shadow-sky-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+              className="flex items-center justify-center gap-3 px-8 py-3.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-semibold shadow-lg shadow-orange-500/25 transition-all hover:scale-[1.02] active:scale-[0.98]"
             >
               <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
                 <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
@@ -119,32 +119,32 @@ export function Home() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-8 text-left">
-          <div className="p-6 rounded-2xl border border-slate-800 bg-slate-900/40 backdrop-blur">
-            <div className="w-10 h-10 rounded-xl bg-sky-950 border border-sky-800/50 flex items-center justify-center text-sky-400 mb-4 font-bold">
+          <div className="p-6 rounded-2xl border border-neutral-800 bg-neutral-900/50 backdrop-blur">
+            <div className="w-10 h-10 rounded-xl bg-neutral-800 border border-neutral-700 flex items-center justify-center text-orange-400 mb-4 font-bold">
               1
             </div>
-            <h3 className="text-base font-semibold text-slate-200 mb-1">Safe Zip Ingestion</h3>
-            <p className="text-sm text-slate-400 leading-relaxed">
+            <h3 className="text-base font-semibold text-neutral-200 mb-1">Safe Zip Ingestion</h3>
+            <p className="text-sm text-neutral-400 leading-relaxed">
               Fetches public repositories with streaming extraction, zip-bomb mitigation, and path traversal defense.
             </p>
           </div>
 
-          <div className="p-6 rounded-2xl border border-slate-800 bg-slate-900/40 backdrop-blur">
-            <div className="w-10 h-10 rounded-xl bg-indigo-950 border border-indigo-800/50 flex items-center justify-center text-indigo-400 mb-4 font-bold">
+          <div className="p-6 rounded-2xl border border-neutral-800 bg-neutral-900/50 backdrop-blur">
+            <div className="w-10 h-10 rounded-xl bg-neutral-800 border border-neutral-700 flex items-center justify-center text-orange-400 mb-4 font-bold">
               2
             </div>
-            <h3 className="text-base font-semibold text-slate-200 mb-1">Tree-Sitter Parsing</h3>
-            <p className="text-sm text-slate-400 leading-relaxed">
+            <h3 className="text-base font-semibold text-neutral-200 mb-1">Tree-Sitter Parsing</h3>
+            <p className="text-sm text-neutral-400 leading-relaxed">
               Extracts symbols, exports, and call graphs using pure grammar engines — zero LLM hallucination in topology.
             </p>
           </div>
 
-          <div className="p-6 rounded-2xl border border-slate-800 bg-slate-900/40 backdrop-blur">
-            <div className="w-10 h-10 rounded-xl bg-purple-950 border border-purple-800/50 flex items-center justify-center text-purple-400 mb-4 font-bold">
+          <div className="p-6 rounded-2xl border border-neutral-800 bg-neutral-900/50 backdrop-blur">
+            <div className="w-10 h-10 rounded-xl bg-neutral-800 border border-neutral-700 flex items-center justify-center text-orange-400 mb-4 font-bold">
               3
             </div>
-            <h3 className="text-base font-semibold text-slate-200 mb-1">Interactive Blast Radius</h3>
-            <p className="text-sm text-slate-400 leading-relaxed">
+            <h3 className="text-base font-semibold text-neutral-200 mb-1">Interactive Blast Radius</h3>
+            <p className="text-sm text-neutral-400 leading-relaxed">
               Explore your code visually, calculate exact change impacts, and propose verified pull requests.
             </p>
           </div>
@@ -159,8 +159,8 @@ export function Home() {
       {/* Repo Input Section */}
       <section className="space-y-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-100">Analyze Repository</h1>
-          <p className="text-sm text-slate-400 mt-1">
+          <h1 className="text-2xl font-bold tracking-tight text-neutral-100">Analyze Repository</h1>
+          <p className="text-sm text-neutral-400 mt-1">
             Paste a public GitHub repository link or shorthand to inspect its architecture.
           </p>
         </div>
@@ -178,7 +178,7 @@ export function Home() {
                 onChange={(e) => handleInputChange(e.target.value)}
                 onBlur={handleInputBlur}
                 placeholder="e.g. https://github.com/facebook/react or facebook/react"
-                className="w-full px-4 py-3 rounded-xl bg-slate-900 border border-slate-800 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/50 focus:border-sky-500 text-sm font-mono transition-all"
+                className="w-full px-4 py-3 rounded-xl bg-neutral-900 border border-neutral-800 text-neutral-100 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 text-sm font-mono transition-all"
                 disabled={createRepo.isPending}
               />
             </div>
@@ -186,7 +186,7 @@ export function Home() {
               id="analyze-repo-btn"
               type="submit"
               disabled={createRepo.isPending || !inputUrl.trim()}
-              className="px-6 py-3 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium text-sm transition-all shadow-md shadow-sky-500/20 flex items-center justify-center gap-2 shrink-0"
+              className="px-6 py-3 rounded-xl bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-sm transition-all shadow-md shadow-orange-500/20 flex items-center justify-center gap-2 shrink-0 hover:scale-[1.01] active:scale-[0.99]"
             >
               {createRepo.isPending ? (
                 <>
@@ -327,13 +327,13 @@ function RepoCard({
             <h3 className="font-semibold text-slate-100 text-base leading-snug flex items-center gap-1.5">
               <span>{repo.owner}</span>
               <span className="text-slate-500">/</span>
-              <span className="text-sky-300 font-bold">{repo.name}</span>
+              <span className="text-orange-400 font-bold">{repo.name}</span>
             </h3>
-            <p className="text-xs text-slate-400 font-mono mt-0.5">
+            <p className="text-xs text-neutral-400 font-mono mt-0.5">
               {repo.branch}
               {repo.commit_sha && (
-                <span className="text-slate-500 ml-1.5">
-                  @ <span className="text-indigo-400">{repo.commit_sha.slice(0, 7)}</span>
+                <span className="text-neutral-500 ml-1.5">
+                  @ <span className="text-neutral-300">{repo.commit_sha.slice(0, 7)}</span>
                 </span>
               )}
             </p>
@@ -352,14 +352,14 @@ function RepoCard({
 
         {/* Ready stats (file count & size) */}
         {repo.status === "fetched" && (
-          <div className="flex items-center gap-4 text-xs text-slate-400 font-mono pt-1">
+          <div className="flex items-center gap-4 text-xs text-neutral-400 font-mono pt-1">
             <div>
-              <span className="text-slate-500">Files: </span>
-              <span className="text-slate-200 font-medium">{repo.file_count ?? 0}</span>
+              <span className="text-neutral-500">Files: </span>
+              <span className="text-neutral-200 font-medium">{repo.file_count ?? 0}</span>
             </div>
             <div>
-              <span className="text-slate-500">Size: </span>
-              <span className="text-slate-200 font-medium">
+              <span className="text-neutral-500">Size: </span>
+              <span className="text-neutral-200 font-medium">
                 {repo.default_branch_size_kb ? `${repo.default_branch_size_kb} KB` : "N/A"}
               </span>
             </div>
@@ -368,15 +368,15 @@ function RepoCard({
       </div>
 
       {/* Card Footer: Timestamp & Actions */}
-      <div className="mt-4 pt-3 border-t border-slate-800/60 flex items-center justify-between text-xs">
-        <span className="text-slate-500">Updated {formatRelativeTime(repo.updated_at)}</span>
+      <div className="mt-4 pt-3 border-t border-neutral-800/80 flex items-center justify-between text-xs">
+        <span className="text-neutral-500">Updated {formatRelativeTime(repo.updated_at)}</span>
 
         <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
           {repo.status === "fetched" && (
             <Link
               to={`/repos/${repo.id}`}
               id={`open-repo-${repo.id}`}
-              className="px-2.5 py-1 rounded-md bg-sky-950 hover:bg-sky-900 border border-sky-800/60 text-sky-300 font-medium transition-colors"
+              className="px-3 py-1 rounded-md bg-orange-500 hover:bg-orange-600 text-white font-medium transition-colors shadow-sm"
             >
               Open
             </Link>

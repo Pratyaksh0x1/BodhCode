@@ -1,0 +1,67 @@
+[
+  {
+    "path": "src/dynamic-target.ts",
+    "facts": {
+      "path": "src/dynamic-target.ts",
+      "imports": [],
+      "exports": ["run"],
+      "has_default_export": false,
+      "unresolved_dynamic": 0,
+      "flags": []
+    },
+    "resolved_imports": []
+  },
+  {
+    "path": "src/main.ts",
+    "facts": {
+      "path": "src/main.ts",
+      "imports": [
+        {"specifier": "./dynamic-target", "kind": "dynamic", "line": 1, "type_only": false},
+        {"specifier": "./required-target", "kind": "require", "line": 3, "type_only": false},
+        {"specifier": "./ts-required", "kind": "require", "line": 5, "type_only": false}
+      ],
+      "exports": [],
+      "has_default_export": false,
+      "unresolved_dynamic": 2,
+      "flags": []
+    },
+    "resolved_imports": [
+      {
+        "ref": {"specifier": "./dynamic-target", "kind": "dynamic", "line": 1, "type_only": false},
+        "resolution": {"kind": "file", "target": "src/dynamic-target.ts", "package": null}
+      },
+      {
+        "ref": {"specifier": "./required-target", "kind": "require", "line": 3, "type_only": false},
+        "resolution": {"kind": "file", "target": "src/required-target.ts", "package": null}
+      },
+      {
+        "ref": {"specifier": "./ts-required", "kind": "require", "line": 5, "type_only": false},
+        "resolution": {"kind": "file", "target": "src/ts-required.ts", "package": null}
+      }
+    ]
+  },
+  {
+    "path": "src/required-target.ts",
+    "facts": {
+      "path": "src/required-target.ts",
+      "imports": [],
+      "exports": ["req"],
+      "has_default_export": false,
+      "unresolved_dynamic": 0,
+      "flags": []
+    },
+    "resolved_imports": []
+  },
+  {
+    "path": "src/ts-required.ts",
+    "facts": {
+      "path": "src/ts-required.ts",
+      "imports": [],
+      "exports": ["tsReq"],
+      "has_default_export": false,
+      "unresolved_dynamic": 0,
+      "flags": []
+    },
+    "resolved_imports": []
+  }
+]

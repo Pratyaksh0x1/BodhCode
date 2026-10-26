@@ -1,0 +1,81 @@
+[
+  {
+    "path": "packages/app/src/index.ts",
+    "facts": {
+      "path": "packages/app/src/index.ts",
+      "imports": [
+        {"specifier": "@app/utils", "kind": "import", "line": 1, "type_only": false},
+        {"specifier": "@shared/helpers", "kind": "import", "line": 2, "type_only": false}
+      ],
+      "exports": ["app"],
+      "has_default_export": false,
+      "unresolved_dynamic": 0,
+      "flags": []
+    },
+    "resolved_imports": [
+      {
+        "ref": {"specifier": "@app/utils", "kind": "import", "line": 1, "type_only": false},
+        "resolution": {"kind": "file", "target": "packages/app/src/utils.ts", "package": null}
+      },
+      {
+        "ref": {"specifier": "@shared/helpers", "kind": "import", "line": 2, "type_only": false},
+        "resolution": {"kind": "file", "target": "shared/helpers.ts", "package": null}
+      }
+    ]
+  },
+  {
+    "path": "packages/app/src/utils.ts",
+    "facts": {
+      "path": "packages/app/src/utils.ts",
+      "imports": [],
+      "exports": ["appUtil"],
+      "has_default_export": false,
+      "unresolved_dynamic": 0,
+      "flags": []
+    },
+    "resolved_imports": []
+  },
+  {
+    "path": "packages/lib/src/core.ts",
+    "facts": {
+      "path": "packages/lib/src/core.ts",
+      "imports": [],
+      "exports": ["libCore"],
+      "has_default_export": false,
+      "unresolved_dynamic": 0,
+      "flags": []
+    },
+    "resolved_imports": []
+  },
+  {
+    "path": "packages/lib/src/index.ts",
+    "facts": {
+      "path": "packages/lib/src/index.ts",
+      "imports": [
+        {"specifier": "@lib/core", "kind": "import", "line": 1, "type_only": false}
+      ],
+      "exports": ["lib"],
+      "has_default_export": false,
+      "unresolved_dynamic": 0,
+      "flags": []
+    },
+    "resolved_imports": [
+      {
+        "ref": {"specifier": "@lib/core", "kind": "import", "line": 1, "type_only": false},
+        "resolution": {"kind": "file", "target": "packages/lib/src/core.ts", "package": null}
+      }
+    ]
+  },
+  {
+    "path": "shared/helpers.ts",
+    "facts": {
+      "path": "shared/helpers.ts",
+      "imports": [],
+      "exports": ["sharedUtil"],
+      "has_default_export": false,
+      "unresolved_dynamic": 0,
+      "flags": []
+    },
+    "resolved_imports": []
+  }
+]

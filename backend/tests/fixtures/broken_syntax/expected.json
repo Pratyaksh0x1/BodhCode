@@ -1,0 +1,33 @@
+[
+  {
+    "path": "src/broken.ts",
+    "facts": {
+      "path": "src/broken.ts",
+      "imports": [
+        {"specifier": "./valid", "kind": "import", "line": 1, "type_only": false}
+      ],
+      "exports": ["good"],
+      "has_default_export": false,
+      "unresolved_dynamic": 0,
+      "flags": ["parse_error"]
+    },
+    "resolved_imports": [
+      {
+        "ref": {"specifier": "./valid", "kind": "import", "line": 1, "type_only": false},
+        "resolution": {"kind": "file", "target": "src/valid.ts", "package": null}
+      }
+    ]
+  },
+  {
+    "path": "src/valid.ts",
+    "facts": {
+      "path": "src/valid.ts",
+      "imports": [],
+      "exports": ["valid"],
+      "has_default_export": false,
+      "unresolved_dynamic": 0,
+      "flags": []
+    },
+    "resolved_imports": []
+  }
+]

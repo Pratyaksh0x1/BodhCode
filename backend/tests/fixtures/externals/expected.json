@@ -1,0 +1,41 @@
+[
+  {
+    "path": "src/index.ts",
+    "facts": {
+      "path": "src/index.ts",
+      "imports": [
+        {"specifier": "react", "kind": "import", "line": 1, "type_only": false},
+        {"specifier": "lodash/fp", "kind": "import", "line": 2, "type_only": false},
+        {"specifier": "@scope/pkg/deep/path", "kind": "import", "line": 3, "type_only": false},
+        {"specifier": "node:fs/promises", "kind": "import", "line": 4, "type_only": false},
+        {"specifier": "path", "kind": "import", "line": 5, "type_only": false}
+      ],
+      "exports": ["x"],
+      "has_default_export": false,
+      "unresolved_dynamic": 0,
+      "flags": []
+    },
+    "resolved_imports": [
+      {
+        "ref": {"specifier": "react", "kind": "import", "line": 1, "type_only": false},
+        "resolution": {"kind": "external", "target": null, "package": "react"}
+      },
+      {
+        "ref": {"specifier": "lodash/fp", "kind": "import", "line": 2, "type_only": false},
+        "resolution": {"kind": "external", "target": null, "package": "lodash"}
+      },
+      {
+        "ref": {"specifier": "@scope/pkg/deep/path", "kind": "import", "line": 3, "type_only": false},
+        "resolution": {"kind": "external", "target": null, "package": "@scope/pkg"}
+      },
+      {
+        "ref": {"specifier": "node:fs/promises", "kind": "import", "line": 4, "type_only": false},
+        "resolution": {"kind": "builtin", "target": null, "package": null}
+      },
+      {
+        "ref": {"specifier": "path", "kind": "import", "line": 5, "type_only": false},
+        "resolution": {"kind": "builtin", "target": null, "package": null}
+      }
+    ]
+  }
+]

@@ -1,0 +1,67 @@
+[
+  {
+    "path": "src/component.tsx",
+    "facts": {
+      "path": "src/component.tsx",
+      "imports": [],
+      "exports": ["comp"],
+      "has_default_export": false,
+      "unresolved_dynamic": 0,
+      "flags": []
+    },
+    "resolved_imports": []
+  },
+  {
+    "path": "src/helper.mts",
+    "facts": {
+      "path": "src/helper.mts",
+      "imports": [],
+      "exports": ["helper"],
+      "has_default_export": false,
+      "unresolved_dynamic": 0,
+      "flags": []
+    },
+    "resolved_imports": []
+  },
+  {
+    "path": "src/index.ts",
+    "facts": {
+      "path": "src/index.ts",
+      "imports": [
+        {"specifier": "./util.js", "kind": "import", "line": 1, "type_only": false},
+        {"specifier": "./component.jsx", "kind": "import", "line": 2, "type_only": false},
+        {"specifier": "./helper.mjs", "kind": "import", "line": 3, "type_only": false}
+      ],
+      "exports": ["res"],
+      "has_default_export": false,
+      "unresolved_dynamic": 0,
+      "flags": []
+    },
+    "resolved_imports": [
+      {
+        "ref": {"specifier": "./util.js", "kind": "import", "line": 1, "type_only": false},
+        "resolution": {"kind": "file", "target": "src/util.ts", "package": null}
+      },
+      {
+        "ref": {"specifier": "./component.jsx", "kind": "import", "line": 2, "type_only": false},
+        "resolution": {"kind": "file", "target": "src/component.tsx", "package": null}
+      },
+      {
+        "ref": {"specifier": "./helper.mjs", "kind": "import", "line": 3, "type_only": false},
+        "resolution": {"kind": "file", "target": "src/helper.mts", "package": null}
+      }
+    ]
+  },
+  {
+    "path": "src/util.ts",
+    "facts": {
+      "path": "src/util.ts",
+      "imports": [],
+      "exports": ["util"],
+      "has_default_export": false,
+      "unresolved_dynamic": 0,
+      "flags": []
+    },
+    "resolved_imports": []
+  }
+]

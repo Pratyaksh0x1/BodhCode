@@ -1,0 +1,50 @@
+[
+  {
+    "path": "src/api/index.ts",
+    "facts": {
+      "path": "src/api/index.ts",
+      "imports": [],
+      "exports": ["api"],
+      "has_default_export": false,
+      "unresolved_dynamic": 0,
+      "flags": []
+    },
+    "resolved_imports": []
+  },
+  {
+    "path": "src/main.ts",
+    "facts": {
+      "path": "src/main.ts",
+      "imports": [
+        {"specifier": "./api", "kind": "import", "line": 1, "type_only": false},
+        {"specifier": "./utils", "kind": "import", "line": 2, "type_only": false}
+      ],
+      "exports": ["started"],
+      "has_default_export": false,
+      "unresolved_dynamic": 0,
+      "flags": []
+    },
+    "resolved_imports": [
+      {
+        "ref": {"specifier": "./api", "kind": "import", "line": 1, "type_only": false},
+        "resolution": {"kind": "file", "target": "src/api/index.ts", "package": null}
+      },
+      {
+        "ref": {"specifier": "./utils", "kind": "import", "line": 2, "type_only": false},
+        "resolution": {"kind": "file", "target": "src/utils/index.tsx", "package": null}
+      }
+    ]
+  },
+  {
+    "path": "src/utils/index.tsx",
+    "facts": {
+      "path": "src/utils/index.tsx",
+      "imports": [],
+      "exports": ["utils"],
+      "has_default_export": false,
+      "unresolved_dynamic": 0,
+      "flags": []
+    },
+    "resolved_imports": []
+  }
+]

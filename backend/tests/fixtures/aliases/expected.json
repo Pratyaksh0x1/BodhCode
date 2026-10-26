@@ -1,0 +1,50 @@
+[
+  {
+    "path": "src/components/Button.tsx",
+    "facts": {
+      "path": "src/components/Button.tsx",
+      "imports": [],
+      "exports": ["Button"],
+      "has_default_export": false,
+      "unresolved_dynamic": 0,
+      "flags": []
+    },
+    "resolved_imports": []
+  },
+  {
+    "path": "src/components/Header.tsx",
+    "facts": {
+      "path": "src/components/Header.tsx",
+      "imports": [],
+      "exports": ["Header"],
+      "has_default_export": false,
+      "unresolved_dynamic": 0,
+      "flags": []
+    },
+    "resolved_imports": []
+  },
+  {
+    "path": "src/index.ts",
+    "facts": {
+      "path": "src/index.ts",
+      "imports": [
+        {"specifier": "@/components/Button", "kind": "import", "line": 1, "type_only": false},
+        {"specifier": "@components/Header", "kind": "import", "line": 2, "type_only": false}
+      ],
+      "exports": ["App"],
+      "has_default_export": false,
+      "unresolved_dynamic": 0,
+      "flags": []
+    },
+    "resolved_imports": [
+      {
+        "ref": {"specifier": "@/components/Button", "kind": "import", "line": 1, "type_only": false},
+        "resolution": {"kind": "file", "target": "src/components/Button.tsx", "package": null}
+      },
+      {
+        "ref": {"specifier": "@components/Header", "kind": "import", "line": 2, "type_only": false},
+        "resolution": {"kind": "file", "target": "src/components/Header.tsx", "package": null}
+      }
+    ]
+  }
+]

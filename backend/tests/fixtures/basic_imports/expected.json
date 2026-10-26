@@ -1,0 +1,70 @@
+[
+  {
+    "path": "src/dep.ts",
+    "facts": {
+      "path": "src/dep.ts",
+      "imports": [],
+      "exports": ["InnerType", "TypeOnly", "namedA", "namedB"],
+      "has_default_export": true,
+      "unresolved_dynamic": 0,
+      "flags": []
+    },
+    "resolved_imports": []
+  },
+  {
+    "path": "src/index.ts",
+    "facts": {
+      "path": "src/index.ts",
+      "imports": [
+        {"specifier": "./dep", "kind": "import", "line": 1, "type_only": false},
+        {"specifier": "./dep", "kind": "import", "line": 2, "type_only": false},
+        {"specifier": "./dep", "kind": "import", "line": 3, "type_only": false},
+        {"specifier": "./side-effect", "kind": "import", "line": 4, "type_only": false},
+        {"specifier": "./dep", "kind": "import", "line": 5, "type_only": true},
+        {"specifier": "./dep", "kind": "import", "line": 6, "type_only": true}
+      ],
+      "exports": ["main"],
+      "has_default_export": false,
+      "unresolved_dynamic": 0,
+      "flags": []
+    },
+    "resolved_imports": [
+      {
+        "ref": {"specifier": "./dep", "kind": "import", "line": 1, "type_only": false},
+        "resolution": {"kind": "file", "target": "src/dep.ts", "package": null}
+      },
+      {
+        "ref": {"specifier": "./dep", "kind": "import", "line": 2, "type_only": false},
+        "resolution": {"kind": "file", "target": "src/dep.ts", "package": null}
+      },
+      {
+        "ref": {"specifier": "./dep", "kind": "import", "line": 3, "type_only": false},
+        "resolution": {"kind": "file", "target": "src/dep.ts", "package": null}
+      },
+      {
+        "ref": {"specifier": "./side-effect", "kind": "import", "line": 4, "type_only": false},
+        "resolution": {"kind": "file", "target": "src/side-effect.ts", "package": null}
+      },
+      {
+        "ref": {"specifier": "./dep", "kind": "import", "line": 5, "type_only": true},
+        "resolution": {"kind": "file", "target": "src/dep.ts", "package": null}
+      },
+      {
+        "ref": {"specifier": "./dep", "kind": "import", "line": 6, "type_only": true},
+        "resolution": {"kind": "file", "target": "src/dep.ts", "package": null}
+      }
+    ]
+  },
+  {
+    "path": "src/side-effect.ts",
+    "facts": {
+      "path": "src/side-effect.ts",
+      "imports": [],
+      "exports": [],
+      "has_default_export": false,
+      "unresolved_dynamic": 0,
+      "flags": []
+    },
+    "resolved_imports": []
+  }
+]

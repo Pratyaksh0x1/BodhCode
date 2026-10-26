@@ -1,0 +1,84 @@
+[
+  {
+    "path": "src/barrel.ts",
+    "facts": {
+      "path": "src/barrel.ts",
+      "imports": [
+        {"specifier": "./mod-a", "kind": "reexport", "line": 1, "type_only": false},
+        {"specifier": "./mod-b", "kind": "reexport", "line": 2, "type_only": false},
+        {"specifier": "./mod-c", "kind": "reexport", "line": 3, "type_only": false},
+        {"specifier": "./mod-e", "kind": "reexport", "line": 4, "type_only": true}
+      ],
+      "exports": ["TypeE", "itemC", "nsB", "renamedD"],
+      "has_default_export": false,
+      "unresolved_dynamic": 0,
+      "flags": []
+    },
+    "resolved_imports": [
+      {
+        "ref": {"specifier": "./mod-a", "kind": "reexport", "line": 1, "type_only": false},
+        "resolution": {"kind": "file", "target": "src/mod-a.ts", "package": null}
+      },
+      {
+        "ref": {"specifier": "./mod-b", "kind": "reexport", "line": 2, "type_only": false},
+        "resolution": {"kind": "file", "target": "src/mod-b.ts", "package": null}
+      },
+      {
+        "ref": {"specifier": "./mod-c", "kind": "reexport", "line": 3, "type_only": false},
+        "resolution": {"kind": "file", "target": "src/mod-c.ts", "package": null}
+      },
+      {
+        "ref": {"specifier": "./mod-e", "kind": "reexport", "line": 4, "type_only": true},
+        "resolution": {"kind": "file", "target": "src/mod-e.ts", "package": null}
+      }
+    ]
+  },
+  {
+    "path": "src/mod-a.ts",
+    "facts": {
+      "path": "src/mod-a.ts",
+      "imports": [],
+      "exports": ["a"],
+      "has_default_export": false,
+      "unresolved_dynamic": 0,
+      "flags": []
+    },
+    "resolved_imports": []
+  },
+  {
+    "path": "src/mod-b.ts",
+    "facts": {
+      "path": "src/mod-b.ts",
+      "imports": [],
+      "exports": ["b"],
+      "has_default_export": false,
+      "unresolved_dynamic": 0,
+      "flags": []
+    },
+    "resolved_imports": []
+  },
+  {
+    "path": "src/mod-c.ts",
+    "facts": {
+      "path": "src/mod-c.ts",
+      "imports": [],
+      "exports": ["itemC", "itemD"],
+      "has_default_export": false,
+      "unresolved_dynamic": 0,
+      "flags": []
+    },
+    "resolved_imports": []
+  },
+  {
+    "path": "src/mod-e.ts",
+    "facts": {
+      "path": "src/mod-e.ts",
+      "imports": [],
+      "exports": ["TypeE"],
+      "has_default_export": false,
+      "unresolved_dynamic": 0,
+      "flags": []
+    },
+    "resolved_imports": []
+  }
+]

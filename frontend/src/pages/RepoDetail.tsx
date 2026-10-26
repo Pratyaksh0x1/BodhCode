@@ -17,7 +17,7 @@ export function RepoDetail() {
   if (isError || !repo) {
     return (
       <div className="space-y-4">
-        <Link to="/" className="text-sm text-sky-400 hover:text-sky-300 inline-flex items-center gap-1.5">
+        <Link to="/" className="text-sm text-orange-400 hover:text-orange-300 inline-flex items-center gap-1.5">
           &larr; Back to repositories
         </Link>
         <div className="p-6 rounded-2xl bg-rose-950/30 border border-rose-900/50 text-rose-300 space-y-2">
@@ -31,29 +31,29 @@ export function RepoDetail() {
   return (
     <div className="space-y-8">
       {/* Breadcrumb Navigation */}
-      <div className="flex items-center gap-2 text-xs font-mono text-slate-500">
-        <Link to="/" className="text-slate-400 hover:text-slate-200 transition-colors">
+      <div className="flex items-center gap-2 text-xs font-mono text-neutral-500">
+        <Link to="/" className="text-neutral-400 hover:text-neutral-200 transition-colors">
           Repositories
         </Link>
         <span>/</span>
-        <span className="text-slate-200">{repo.owner}</span>
+        <span className="text-neutral-200">{repo.owner}</span>
         <span>/</span>
-        <span className="text-sky-400 font-bold">{repo.name}</span>
+        <span className="text-orange-400 font-bold">{repo.name}</span>
       </div>
 
       {/* Repo Title Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-neutral-800">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-slate-100 flex items-center gap-2">
+          <h1 className="text-3xl font-extrabold tracking-tight text-neutral-100 flex items-center gap-2">
             <span>{repo.owner}</span>
-            <span className="text-slate-600">/</span>
-            <span className="text-sky-300">{repo.name}</span>
+            <span className="text-neutral-600">/</span>
+            <span className="text-orange-400">{repo.name}</span>
           </h1>
-          <p className="text-sm text-slate-400 font-mono mt-1">
-            branch <span className="text-slate-200">{repo.branch}</span>
+          <p className="text-sm text-neutral-400 font-mono mt-1">
+            branch <span className="text-neutral-200">{repo.branch}</span>
             {repo.commit_sha && (
-              <span className="ml-2 text-slate-500">
-                @ <span className="text-indigo-400">{repo.commit_sha.slice(0, 7)}</span>
+              <span className="ml-2 text-neutral-500">
+                @ <span className="text-neutral-300">{repo.commit_sha.slice(0, 7)}</span>
               </span>
             )}
           </p>
