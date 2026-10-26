@@ -1,4 +1,3 @@
-
 from sqlmodel import Session, select
 
 from app.auth.crypto import encrypt_token

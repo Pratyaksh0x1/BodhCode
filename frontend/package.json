@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "lint": "eslint .",
+    "lint": "node --max-old-space-size=4096 ./node_modules/eslint/bin/eslint.js .",
     "test": "vitest run",
     "format": "prettier --check .",
     "preview": "vite preview"

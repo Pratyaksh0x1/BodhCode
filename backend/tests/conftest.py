@@ -10,7 +10,7 @@ from app.main import app
 
 
 @pytest.fixture(name="db_session")
-def db_session_fixture() -> Generator[Session, None, None]:
+def db_session_fixture(monkeypatch: pytest.MonkeyPatch) -> Generator[Session, None, None]:
     """In-memory SQLite test database fixture."""
     test_engine = create_engine(
         "sqlite:///:memory:",
@@ -18,6 +18,7 @@ def db_session_fixture() -> Generator[Session, None, None]:
         poolclass=StaticPool,
     )
     SQLModel.metadata.create_all(test_engine)
+    monkeypatch.setattr("app.db.engine", test_engine)
     with Session(test_engine) as session:
         yield session
 

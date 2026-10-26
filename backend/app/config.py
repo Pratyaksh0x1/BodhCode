@@ -43,9 +43,7 @@ class Settings(BaseSettings):
         if len(stripped) < 32:
             raise ValueError("APP_SECRET_KEY must be at least 32 characters long")
         if stripped.lower() in DISALLOWED_PLACEHOLDERS:
-            raise ValueError(
-                f"APP_SECRET_KEY cannot be an insecure placeholder: '{v}'"
-            )
+            raise ValueError(f"APP_SECRET_KEY cannot be an insecure placeholder: '{v}'")
         return stripped
 
     @field_validator("FRONTEND_URL", "BACKEND_URL")

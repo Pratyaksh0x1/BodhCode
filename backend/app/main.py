@@ -8,8 +8,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.config import Settings, get_settings
+from app.github.ingest import sweep_stale_fetching_repos
 from app.logging_setup import setup_logging
 from app.routes.auth import router as auth_router
+from app.routes.repos import router as repos_router
 
 
 @asynccontextmanager
@@ -18,6 +20,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     settings = get_settings()
     # Ensure DATA_DIR exists on startup
     Path(settings.DATA_DIR).mkdir(parents=True, exist_ok=True)
+    # Recover any ingestion jobs interrupted if server was killed during fetching
+    sweep_stale_fetching_repos()
     yield
 
 
@@ -54,6 +58,7 @@ def create_app() -> FastAPI:
 
     # Register modular routers
     app.include_router(auth_router)
+    app.include_router(repos_router)
 
     @app.get("/health", tags=["Monitoring"])
     def health_check(
