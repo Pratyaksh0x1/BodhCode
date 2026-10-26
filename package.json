@@ -1,0 +1,11 @@
+{
+  "name": "bodhcode",
+  "private": true,
+  "scripts": {
+    "build": "neon config plan"
+  },
+  "dependencies": {
+    "@neon/config": "^1.9.4",
+    "@neon/env": "^1.6.5"
+  }
+}

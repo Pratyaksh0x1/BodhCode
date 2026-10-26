@@ -1,0 +1,27 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# ==============================================================================
+# CodeRabbit Configuration for BodhCode
+# These rules mirror AGENTS.md
+# ==============================================================================
+
+language: "en-US"
+early_access: false
+
+reviews:
+  profile: "chill"
+  request_changes_workflow: false
+  high_level_summary: true
+  auto_review:
+    enabled: true
+    drafts: false
+  path_instructions:
+    - path: "backend/app/parser/**"
+      instructions: "Must stay pure (no network, DB, LLM); every function tested; outputs deterministic and sorted."
+    - path: "backend/app/ai/**"
+      instructions: "No secrets in prompts, logs or traces; LLM output validated against the graph; every LLM call goes through the shared wrapper."
+    - path: "backend/app/github/**"
+      instructions: "Tokens never logged; path-safety on anything touching files; ownership checks on every query."
+    - path: "backend/app/auth/**"
+      instructions: "Tokens never logged; path-safety on anything touching files; ownership checks on every query."
+    - path: "frontend/**"
+      instructions: "Typed props, no any, accessible controls, no secrets in client code."
