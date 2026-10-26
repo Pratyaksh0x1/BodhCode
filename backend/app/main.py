@@ -5,9 +5,11 @@ from typing import Annotated
 
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.sessions import SessionMiddleware
 
 from app.config import Settings, get_settings
 from app.logging_setup import setup_logging
+from app.routes.auth import router as auth_router
 
 
 @asynccontextmanager
@@ -31,6 +33,16 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    # Configure cookie-based session storage
+    app.add_middleware(
+        SessionMiddleware,
+        secret_key=settings.APP_SECRET_KEY,
+        session_cookie="bodhcode_session",
+        max_age=14 * 24 * 60 * 60,
+        same_site="lax",
+        https_only=(settings.ENV == "production"),
+    )
+
     # Configure strict CORS for frontend integration
     app.add_middleware(
         CORSMiddleware,
@@ -39,6 +51,9 @@ def create_app() -> FastAPI:
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["Content-Type", "X-Requested-With"],
     )
+
+    # Register modular routers
+    app.include_router(auth_router)
 
     @app.get("/health", tags=["Monitoring"])
     def health_check(

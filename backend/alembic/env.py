@@ -6,6 +6,7 @@ from sqlmodel import SQLModel, create_engine
 
 from alembic import context
 from app.config import get_settings
+from app.models.user import User  # noqa: F401
 
 # Alembic Config object
 config = context.config
