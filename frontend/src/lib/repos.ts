@@ -10,11 +10,78 @@ export interface Repo {
   commit_sha: string | null;
   default_branch_size_kb: number | null;
   file_count: number | null;
-  status: "queued" | "fetching" | "fetched" | "failed";
+  status: "queued" | "fetching" | "fetched" | "analyzing" | "ready" | "failed";
   error_code: string | null;
   error_message: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface GraphStats {
+  files: number;
+  edges: number;
+  external_packages: number;
+  cycles: number;
+  unresolved: number;
+}
+
+export interface GraphNode {
+  id: string;
+  name: string;
+  folder: string;
+  size: number;
+  exports: string[];
+  has_default_export: boolean;
+  external_deps: string[];
+  unresolved_count: number;
+  unresolved_dynamic: number;
+  flags: string[];
+}
+
+export interface GraphEdge {
+  id: string;
+  source: string;
+  target: string;
+  kind: string;
+  type_only: boolean;
+  count: number;
+}
+
+export interface GraphFolder {
+  id: string;
+  parent: string;
+  file_count: number;
+}
+
+export interface GraphDoc {
+  version: number;
+  repo: {
+    owner: string;
+    name: string;
+    commit_sha: string;
+  };
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+  folders: GraphFolder[];
+  stats: GraphStats;
+}
+
+export interface BlastImpact {
+  file: string;
+  depth: number;
+  via: string;
+}
+
+export interface BlastResult {
+  file: string;
+  total: number;
+  impacts: BlastImpact[];
+}
+
+export interface FileDepsResult {
+  file: string;
+  dependencies: string[];
+  dependents: string[];
 }
 
 const GITHUB_NAME_REGEX = /^[a-zA-Z0-9_.-]+$/;
@@ -86,8 +153,13 @@ export function useRepos() {
     queryFn: () => api<Repo[]>("/repos"),
     refetchInterval: (query) => {
       const data = query.state.data;
-      if (data && data.some((r) => r.status === "queued" || r.status === "fetching")) {
-        return 2000;
+      if (
+        data &&
+        data.some(
+          (r) => r.status === "queued" || r.status === "fetching" || r.status === "analyzing"
+        )
+      ) {
+        return 1500;
       }
       return false;
     },
@@ -101,11 +173,38 @@ export function useRepo(id: number | string | undefined) {
     enabled: Boolean(id),
     refetchInterval: (query) => {
       const data = query.state.data;
-      if (data && (data.status === "queued" || data.status === "fetching")) {
-        return 2000;
+      if (
+        data &&
+        (data.status === "queued" || data.status === "fetching" || data.status === "analyzing")
+      ) {
+        return 1500;
       }
       return false;
     },
+  });
+}
+
+export function useAnalyzeRepo() {
+  const queryClient = useQueryClient();
+
+  return useMutation<Repo, Error, number>({
+    mutationFn: (id: number) =>
+      api<Repo>(`/repos/${id}/analyze`, {
+        method: "POST",
+      }),
+    onSuccess: (data) => {
+      queryClient.setQueryData([...REPOS_QUERY_KEY, String(data.id)], data);
+      queryClient.invalidateQueries({ queryKey: REPOS_QUERY_KEY });
+    },
+  });
+}
+
+export function useRepoGraph(id: number | string | undefined, enabled: boolean = true) {
+  return useQuery<GraphDoc, Error>({
+    queryKey: ["repo_graph", id],
+    queryFn: () => api<GraphDoc>(`/repos/${id}/graph`),
+    enabled: Boolean(id) && enabled,
+    staleTime: 60_000,
   });
 }
 
@@ -151,3 +250,29 @@ export function useDeleteRepo() {
     },
   });
 }
+
+export function useFileDeps(
+  repoId: number | string | undefined,
+  file: string | null,
+  enabled: boolean = true
+) {
+  return useQuery<FileDepsResult, Error>({
+    queryKey: ["repo_deps", repoId, file],
+    queryFn: () =>
+      api<FileDepsResult>(
+        `/repos/${repoId}/deps?file=${encodeURIComponent(file || "")}&depth=1`
+      ),
+    enabled: Boolean(repoId && file) && enabled,
+    staleTime: 60_000,
+  });
+}
+
+export function useFileBlastMutation(repoId: number | string | undefined) {
+  return useMutation<BlastResult, Error, { file: string; includeTypeOnly?: boolean }>({
+    mutationFn: ({ file, includeTypeOnly = true }) =>
+      api<BlastResult>(
+        `/repos/${repoId}/blast?file=${encodeURIComponent(file)}&include_type_only=${includeTypeOnly}`
+      ),
+  });
+}
+
