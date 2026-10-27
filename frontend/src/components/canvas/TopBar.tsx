@@ -7,6 +7,8 @@ export const TopBar = memo(function TopBar() {
   const graph = useGraphContext();
   const expandAll = useGraphStore((s) => s.expandAll);
   const collapseAll = useGraphStore((s) => s.collapseAll);
+  const isChatOpen = useGraphStore((s) => s.isChatOpen);
+  const toggleChat = useGraphStore((s) => s.toggleChat);
 
   const canExpand = canExpandAll(graph);
 
@@ -87,6 +89,22 @@ export const TopBar = memo(function TopBar() {
           className="px-3 py-1 rounded-lg border text-xs font-medium transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-orange-500/60 bg-neutral-100 dark:bg-neutral-800 border-neutral-300 dark:border-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-100"
         >
           Collapse all
+        </button>
+
+        <button
+          type="button"
+          id="toggle-chat-btn"
+          onClick={toggleChat}
+          aria-label={isChatOpen ? "Close AI chat drawer" : "Open AI chat drawer"}
+          title={isChatOpen ? "Close AI chat" : "Open AI chat"}
+          className={`px-3 py-1 rounded-lg border text-xs font-semibold transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-orange-500/60 flex items-center gap-1.5 ${
+            isChatOpen
+              ? "bg-orange-500 text-white border-orange-600 shadow-xs"
+              : "bg-neutral-100 dark:bg-neutral-800 border-neutral-300 dark:border-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-100"
+          }`}
+        >
+          <span>💬</span>
+          <span>Chat</span>
         </button>
       </div>
     </div>

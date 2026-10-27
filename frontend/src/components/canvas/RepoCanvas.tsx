@@ -23,6 +23,7 @@ import { Legend } from "./Legend";
 import { SearchBox } from "./SearchBox";
 import { SidePanel } from "./SidePanel";
 import { TopBar } from "./TopBar";
+import { ChatDrawer } from "./ChatDrawer";
 
 // Define nodeTypes and edgeTypes outside component render to prevent React Flow re-mounts
 const nodeTypes: NodeTypes = {
@@ -37,9 +38,10 @@ const edgeTypes: EdgeTypes = {
 interface RepoCanvasInnerProps {
   repoId: number | string;
   graph: GraphDoc;
+  repoStatus?: string;
 }
 
-function RepoCanvasInner({ repoId, graph }: RepoCanvasInnerProps) {
+function RepoCanvasInner({ repoId, graph, repoStatus }: RepoCanvasInnerProps) {
   const expandedFolders = useGraphStore((s) => s.expandedFolders);
   const initExpanded = useGraphStore((s) => s.initExpanded);
   const edgeKindsVisible = useGraphStore((s) => s.edgeKindsVisible);
@@ -214,6 +216,9 @@ function RepoCanvasInner({ repoId, graph }: RepoCanvasInnerProps) {
 
       {/* Side Panel for Selected File */}
       {selectedFileId && <SidePanel repoId={repoId} />}
+
+      {/* AI Chat Drawer */}
+      <ChatDrawer repoId={repoId} repoStatus={repoStatus} />
     </div>
   );
 }
@@ -221,13 +226,18 @@ function RepoCanvasInner({ repoId, graph }: RepoCanvasInnerProps) {
 export interface RepoCanvasProps {
   repoId: number | string;
   graph: GraphDoc;
+  repoStatus?: string;
 }
 
-export const RepoCanvas = memo(function RepoCanvas({ repoId, graph }: RepoCanvasProps) {
+export const RepoCanvas = memo(function RepoCanvas({
+  repoId,
+  graph,
+  repoStatus,
+}: RepoCanvasProps) {
   return (
     <GraphContext.Provider value={graph}>
       <ReactFlowProvider>
-        <RepoCanvasInner repoId={repoId} graph={graph} />
+        <RepoCanvasInner repoId={repoId} graph={graph} repoStatus={repoStatus} />
       </ReactFlowProvider>
     </GraphContext.Provider>
   );

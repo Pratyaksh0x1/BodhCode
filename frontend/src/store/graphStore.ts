@@ -14,6 +14,7 @@ export interface GraphStoreState {
   edgeKindsVisible: Record<string, boolean>;
   hideTypeOnly: boolean;
   tooManyNodesBanner: boolean;
+  isChatOpen: boolean;
 
   // Actions
   initExpanded: (expanded: Set<string>) => void;
@@ -28,6 +29,8 @@ export interface GraphStoreState {
   expandAll: (graph: GraphDoc) => void;
   collapseAll: () => void;
   dismissBanner: () => void;
+  toggleChat: () => void;
+  setChatOpen: (open: boolean) => void;
   reset: () => void;
 }
 
@@ -46,6 +49,7 @@ export const useGraphStore = create<GraphStoreState>((set, get) => ({
   edgeKindsVisible: { ...DEFAULT_EDGE_KINDS },
   hideTypeOnly: false,
   tooManyNodesBanner: false,
+  isChatOpen: false,
 
   initExpanded: (expanded) => {
     set({ expandedFolders: new Set(expanded) });
@@ -128,6 +132,14 @@ export const useGraphStore = create<GraphStoreState>((set, get) => ({
     set({ tooManyNodesBanner: false });
   },
 
+  toggleChat: () => {
+    set((state) => ({ isChatOpen: !state.isChatOpen }));
+  },
+
+  setChatOpen: (open: boolean) => {
+    set({ isChatOpen: open });
+  },
+
   reset: () => {
     set({
       expandedFolders: new Set(),
@@ -137,6 +149,7 @@ export const useGraphStore = create<GraphStoreState>((set, get) => ({
       edgeKindsVisible: { ...DEFAULT_EDGE_KINDS },
       hideTypeOnly: false,
       tooManyNodesBanner: false,
+      isChatOpen: false,
     });
   },
 }));

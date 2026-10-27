@@ -1,7 +1,15 @@
-import { memo, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
+import ReactMarkdown from "react-markdown";
 import { useReactFlow } from "@xyflow/react";
 import { useGraphStore } from "../../store/graphStore";
-import { useFileBlastMutation, useFileDeps } from "../../lib/repos";
+import {
+  useExplainFile,
+  useFileBlastMutation,
+  useFileDeps,
+  type ExplainResponse,
+} from "../../lib/repos";
+import { useMe } from "../../lib/auth";
+import { useLanguages } from "../../lib/settings";
 import { useGraphContext } from "./GraphContext";
 
 interface SidePanelProps {
@@ -102,6 +110,38 @@ export const SidePanel = memo(function SidePanel({ repoId }: SidePanelProps) {
     }
     return map;
   }, [blast, selectedFileId]);
+
+  // User language & Explain mutation
+  const { data: user } = useMe();
+  const { data: languages } = useLanguages();
+  const currentLanguageCode = user?.preferred_language || "en";
+  const currentLanguage = useMemo(() => {
+    return languages?.find((l) => l.code === currentLanguageCode) || null;
+  }, [languages, currentLanguageCode]);
+  const languageLabel =
+    currentLanguage?.native_name || currentLanguage?.english_name || currentLanguageCode;
+
+  const explainMutation = useExplainFile(repoId);
+  const [explanationResult, setExplanationResult] = useState<ExplainResponse | null>(null);
+
+  // Clear explanation when changing selected files
+  useEffect(() => {
+    setExplanationResult(null);
+  }, [selectedFileId]);
+
+  const handleExplain = async (refresh: boolean = false) => {
+    if (!selectedFileId) return;
+    try {
+      const res = await explainMutation.mutateAsync({
+        filePath: selectedFileId,
+        language: currentLanguageCode,
+        refresh,
+      });
+      setExplanationResult(res);
+    } catch (err) {
+      console.error("Failed to explain file:", err);
+    }
+  };
 
   // Handle panel resizing
   const startResizing = (mouseDownEvent: React.MouseEvent) => {
@@ -270,6 +310,170 @@ export const SidePanel = memo(function SidePanel({ repoId }: SidePanelProps) {
                     </ul>
                   </div>
                 ))}
+            </div>
+          )}
+        </div>
+
+        {/* Grounded File Explanation Section */}
+        <div className="p-3 rounded-xl bg-sky-50/60 dark:bg-sky-950/20 border border-sky-200 dark:border-sky-800/60 space-y-2.5">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 overflow-hidden">
+              <span className="font-bold text-sky-900 dark:text-sky-200">
+                Grounded Explanation
+              </span>
+              <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-sky-100 dark:bg-sky-900/60 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
+                {languageLabel}
+              </span>
+            </div>
+
+            {explanationResult && (
+              <div className="flex items-center gap-1.5">
+                {explanationResult.cached && (
+                  <span
+                    className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
+                    title="Served from deterministic cache"
+                  >
+                    ⚡ Cached
+                  </span>
+                )}
+                {import.meta.env.DEV && (
+                  <button
+                    type="button"
+                    onClick={() => handleExplain(true)}
+                    disabled={explainMutation.isPending}
+                    className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-300 dark:hover:bg-neutral-700 transition-colors cursor-pointer disabled:opacity-50"
+                    title="Regenerate explanation (bypasses cache in DEV mode)"
+                  >
+                    Regenerate
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {!explanationResult && !explainMutation.isPending && (
+            <button
+              type="button"
+              id="explain-file-btn"
+              onClick={() => handleExplain(false)}
+              className="w-full px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-600 hover:bg-sky-700 text-white transition-all shadow-sm cursor-pointer flex items-center justify-center gap-1.5"
+            >
+              <span>✨ Explain {selectedNode.name}</span>
+            </button>
+          )}
+
+          {explainMutation.isPending && (
+            <div className="py-3 px-2 flex flex-col items-center justify-center gap-2 text-sky-700 dark:text-sky-300 bg-sky-100/50 dark:bg-sky-900/20 rounded-lg">
+              <div className="w-4 h-4 border-2 border-sky-600 border-t-transparent rounded-full animate-spin" />
+              <p className="text-[11px] font-medium text-center">
+                Explaining {selectedNode.name} in {languageLabel}...
+              </p>
+            </div>
+          )}
+
+          {explainMutation.isError && (
+            <div className="p-2 rounded bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 text-[11px] space-y-1">
+              <span className="font-semibold block">Failed to explain file</span>
+              <p className="opacity-90">{explainMutation.error?.message || "An unexpected error occurred."}</p>
+              <button
+                type="button"
+                onClick={() => handleExplain(false)}
+                className="mt-1 px-2 py-0.5 rounded text-[10px] bg-rose-100 dark:bg-rose-900 hover:bg-rose-200 text-rose-800 dark:text-rose-200 font-medium cursor-pointer"
+              >
+                Try again
+              </button>
+            </div>
+          )}
+
+          {explanationResult && (
+            <div className="space-y-2">
+              <div className="prose prose-sm dark:prose-invert max-w-none text-neutral-800 dark:text-neutral-200 text-xs leading-relaxed max-h-72 overflow-y-auto p-2.5 rounded-lg bg-white/70 dark:bg-neutral-900/70 border border-sky-100 dark:border-sky-950">
+                <ReactMarkdown
+                  components={{
+                    code: ({ children, ...props }) => {
+                      const text = String(children).trim();
+                      const isVerified = explanationResult.verified_files.includes(text);
+                      const isFlagged =
+                        text.includes("⚠unverified") ||
+                        explanationResult.flagged.includes(text.replace(" ⚠unverified", ""));
+
+                      if (isVerified) {
+                        return (
+                          <button
+                            type="button"
+                            onClick={() => handleNavigate(text)}
+                            className="inline-flex items-center font-mono text-[11px] px-1 py-0.2 rounded bg-sky-100 dark:bg-sky-900/70 text-sky-800 dark:text-sky-200 hover:underline cursor-pointer border border-sky-300 dark:border-sky-700 transition-colors"
+                            title={`Navigate to ${text}`}
+                          >
+                            📄 {text}
+                          </button>
+                        );
+                      }
+
+                      if (isFlagged) {
+                        return (
+                          <span
+                            className="inline-flex items-center gap-1 font-mono text-[11px] px-1 py-0.2 rounded bg-amber-100/80 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700/80"
+                            title="Not found in this repository's graph"
+                          >
+                            <span>{text.replace(" ⚠unverified", "")}</span>
+                            <span className="font-bold text-amber-600 dark:text-amber-400">⚠</span>
+                          </span>
+                        );
+                      }
+
+                      return (
+                        <code
+                          className="bg-neutral-100 dark:bg-neutral-800 px-1 py-0.5 rounded font-mono text-[11px]"
+                          {...props}
+                        >
+                          {children}
+                        </code>
+                      );
+                    },
+                  }}
+                >
+                  {explanationResult.explanation}
+                </ReactMarkdown>
+              </div>
+
+              {/* Verified file chips */}
+              {explanationResult.verified_files.length > 0 && (
+                <div className="pt-2 border-t border-sky-200/50 dark:border-sky-900/40 space-y-1">
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-neutral-400 dark:text-neutral-500 block">
+                    Verified Mentions ({explanationResult.verified_files.length})
+                  </span>
+                  <div className="flex flex-wrap gap-1">
+                    {explanationResult.verified_files.map((file) => (
+                      <button
+                        key={file}
+                        type="button"
+                        onClick={() => handleNavigate(file)}
+                        className="text-[11px] font-mono px-2 py-0.5 rounded bg-sky-100/70 dark:bg-sky-900/50 text-sky-700 dark:text-sky-300 hover:bg-sky-200 dark:hover:bg-sky-800 border border-sky-300/60 dark:border-sky-800 transition-colors cursor-pointer truncate max-w-full"
+                        title={`Navigate to ${file}`}
+                      >
+                        {file}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Flagged unverified mentions */}
+              {explanationResult.flagged.length > 0 && (
+                <div className="pt-1 flex flex-wrap gap-1">
+                  {explanationResult.flagged.map((file) => (
+                    <span
+                      key={file}
+                      className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 inline-flex items-center gap-1"
+                      title="Not found in this repository's graph"
+                    >
+                      <span>{file}</span>
+                      <span className="text-amber-600 font-bold">⚠ unverified</span>
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>

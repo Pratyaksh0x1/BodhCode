@@ -302,7 +302,7 @@ export function RepoDetail() {
                   <p className="text-sm">Loading repository dependency graph...</p>
                 </div>
               ) : (
-                <RepoCanvas repoId={repo.id} graph={graph} />
+                <RepoCanvas repoId={repo.id} graph={graph} repoStatus={repo.status} />
               )}
             </div>
           )}

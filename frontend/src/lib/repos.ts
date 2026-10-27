@@ -434,4 +434,31 @@ export function useRepoPullDetail(
   });
 }
 
+export interface ExplainResponse {
+  explanation: string;
+  verified_files: string[];
+  flagged: string[];
+  language: string;
+  cached: boolean;
+}
+
+export function useExplainFile(repoId: number | string | undefined) {
+  return useMutation<
+    ExplainResponse,
+    Error,
+    { filePath: string; language?: string; refresh?: boolean }
+  >({
+    mutationFn: async ({ filePath, language, refresh = false }) => {
+      const query = refresh ? "?refresh=true" : "";
+      return api<ExplainResponse>(`/repos/${repoId}/explain${query}`, {
+        method: "POST",
+        body: JSON.stringify({
+          file_path: filePath,
+          language: language || "en",
+        }),
+      });
+    },
+  });
+}
+
 

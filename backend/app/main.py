@@ -13,6 +13,7 @@ from app.github.ingest import sweep_stale_fetching_repos
 from app.logging_setup import setup_logging
 from app.routes.auth import router as auth_router
 from app.routes.content import router as content_router
+from app.routes.explain_chat import router as explain_chat_router
 from app.routes.meta import router as meta_router
 from app.routes.repos import router as repos_router
 from app.routes.settings import router as settings_router
@@ -70,6 +71,7 @@ def create_app() -> FastAPI:
     app.include_router(settings_router)
     app.include_router(repos_router)
     app.include_router(content_router)
+    app.include_router(explain_chat_router)
     app.include_router(meta_router)
 
     if settings.ENV == "development":
