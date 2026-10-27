@@ -30,7 +30,17 @@ def _get_parser(lang_key: str) -> Parser:
     return Parser(_LANGUAGES[lang_key])
 
 
-def _extract_string_literal(node: Node) -> str | None:
+def _node_bytes(node: Node, source: bytes) -> bytes:
+    """Safely slice source bytes for a node without C tree-sitter pointer dereferencing."""
+    return source[node.start_byte : node.end_byte]
+
+
+def _node_text(node: Node, source: bytes) -> str:
+    """Safely slice and decode UTF-8 string for a node."""
+    return source[node.start_byte : node.end_byte].decode("utf-8", errors="replace")
+
+
+def _extract_string_literal(node: Node, source: bytes) -> str | None:
     """Extract decoded string literal content without quotes, or None if non-literal / invalid."""
     if node.type == "string":
         parts: list[str] = []
@@ -38,10 +48,10 @@ def _extract_string_literal(node: Node) -> str | None:
             if child.type in ('"', "'"):
                 continue
             if child.type == "string_fragment":
-                parts.append(child.text.decode("utf-8", errors="replace"))
+                parts.append(_node_text(child, source))
             elif child.type == "escape_sequence":
                 try:
-                    decoded = codecs.decode(child.text, "unicode_escape")
+                    decoded = codecs.decode(_node_bytes(child, source), "unicode_escape")
                     parts.append(decoded)
                 except Exception:
                     return None
@@ -55,10 +65,10 @@ def _extract_string_literal(node: Node) -> str | None:
             if child.type == "`":
                 continue
             if child.type == "string_fragment":
-                parts.append(child.text.decode("utf-8", errors="replace"))
+                parts.append(_node_text(child, source))
             elif child.type == "escape_sequence":
                 try:
-                    decoded = codecs.decode(child.text, "unicode_escape")
+                    decoded = codecs.decode(_node_bytes(child, source), "unicode_escape")
                     parts.append(decoded)
                 except Exception:
                     return None
@@ -80,7 +90,7 @@ def _is_all_type_named_imports(named_imports: Node) -> bool:
     return all(any(c.type == "type" for c in spec.children) for spec in specifiers)
 
 
-def _extract_export_names(node: Node) -> list[str]:
+def _extract_export_names(node: Node, source: bytes) -> list[str]:
     """Extract local named exported symbols from an export declaration."""
     names: list[str] = []
     for child in node.children:
@@ -91,8 +101,8 @@ def _extract_export_names(node: Node) -> list[str]:
                     if c.type in ("identifier", "type_identifier"):
                         name_node = c
                         break
-            if name_node and name_node.text:
-                names.append(name_node.text.decode("utf-8", errors="replace"))
+            if name_node and name_node.start_byte < name_node.end_byte:
+                names.append(_node_text(name_node, source))
 
         elif child.type in ("lexical_declaration", "variable_declaration"):
             for decl in child.children:
@@ -103,8 +113,8 @@ def _extract_export_names(node: Node) -> list[str]:
                             if c.type == "identifier":
                                 name_node = c
                                 break
-                    if name_node and name_node.text:
-                        names.append(name_node.text.decode("utf-8", errors="replace"))
+                    if name_node and name_node.start_byte < name_node.end_byte:
+                        names.append(_node_text(name_node, source))
 
         elif child.type in ("interface_declaration", "type_alias_declaration", "internal_module"):
             name_node = child.child_by_field_name("name")
@@ -113,27 +123,27 @@ def _extract_export_names(node: Node) -> list[str]:
                     if c.type in ("identifier", "type_identifier"):
                         name_node = c
                         break
-            if name_node and name_node.text:
-                names.append(name_node.text.decode("utf-8", errors="replace"))
+            if name_node and name_node.start_byte < name_node.end_byte:
+                names.append(_node_text(name_node, source))
 
         elif child.type == "export_clause":
             for spec in child.children:
                 if spec.type == "export_specifier":
                     alias_node = spec.child_by_field_name("alias")
                     name_node = spec.child_by_field_name("name")
-                    if alias_node and alias_node.text:
-                        alias_name = alias_node.text.decode("utf-8", errors="replace")
+                    if alias_node and alias_node.start_byte < alias_node.end_byte:
+                        alias_name = _node_text(alias_node, source)
                         if alias_name != "default":
                             names.append(alias_name)
-                    elif name_node and name_node.text:
-                        id_name = name_node.text.decode("utf-8", errors="replace")
+                    elif name_node and name_node.start_byte < name_node.end_byte:
+                        id_name = _node_text(name_node, source)
                         if id_name != "default":
                             names.append(id_name)
                     else:
                         identifiers = [
-                            c.text.decode("utf-8", errors="replace")
+                            _node_text(c, source)
                             for c in spec.children
-                            if c.type == "identifier"
+                            if c.type == "identifier" and c.start_byte < c.end_byte
                         ]
                         if identifiers:
                             target = identifiers[-1]
@@ -142,8 +152,8 @@ def _extract_export_names(node: Node) -> list[str]:
 
         elif child.type == "namespace_export":
             for c in child.children:
-                if c.type == "identifier" and c.text:
-                    names.append(c.text.decode("utf-8", errors="replace"))
+                if c.type == "identifier" and c.start_byte < c.end_byte:
+                    names.append(_node_text(c, source))
                     break
 
     return names
@@ -192,15 +202,17 @@ def extract_file(path: str, source: bytes) -> FileFacts:
     has_default_export = False
     unresolved_dynamic = 0
 
-    # Iterative stack-based AST walk
-    stack: list[Node] = [tree.root_node]
-    while stack:
-        node = stack.pop()
-
+    # TreeCursor-based AST walk (zero heap churn, memory safe)
+    cursor = tree.walk()
+    reached_root = False
+    while not reached_root:
+        node = cursor.node
         node_type = node.type
+        descend = True
 
         # 1. Standard import statement
         if node_type == "import_statement":
+            descend = False
             line = node.start_point.row + 1
 
             # Check for TS import x = require("...")
@@ -210,7 +222,7 @@ def extract_file(path: str, source: bytes) -> FileFacts:
             if import_require:
                 str_node = next((c for c in import_require.children if c.type == "string"), None)
                 if str_node:
-                    spec = _extract_string_literal(str_node)
+                    spec = _extract_string_literal(str_node, source)
                     if spec is not None:
                         imports_list.append(
                             ImportRef(specifier=spec, kind="require", line=line, type_only=False)
@@ -221,7 +233,7 @@ def extract_file(path: str, source: bytes) -> FileFacts:
                     source_node = next((c for c in node.children if c.type == "string"), None)
 
                 if source_node:
-                    spec = _extract_string_literal(source_node)
+                    spec = _extract_string_literal(source_node, source)
                     if spec is not None:
                         # Determine if type_only
                         type_only = any(c.type == "type" for c in node.children)
@@ -256,6 +268,7 @@ def extract_file(path: str, source: bytes) -> FileFacts:
 
         # 2. Export statement (re-exports or declarations)
         elif node_type == "export_statement":
+            descend = False
             line = node.start_point.row + 1
             source_node = node.child_by_field_name("source")
             if not source_node:
@@ -267,7 +280,7 @@ def extract_file(path: str, source: bytes) -> FileFacts:
 
             # If it has a source, it's a re-export
             if source_node:
-                spec = _extract_string_literal(source_node)
+                spec = _extract_string_literal(source_node, source)
                 if spec is not None:
                     type_only = any(c.type == "type" for c in node.children)
                     if not type_only:
@@ -301,7 +314,7 @@ def extract_file(path: str, source: bytes) -> FileFacts:
                 for s in export_clause.children:
                     if s.type == "export_specifier":
                         alias_node = s.child_by_field_name("alias")
-                        if alias_node and alias_node.text == b"default":
+                        if alias_node and _node_bytes(alias_node, source) == b"default":
                             has_default_export = True
 
             # Extract exported names if not default
@@ -309,7 +322,7 @@ def extract_file(path: str, source: bytes) -> FileFacts:
                 # `export * from` does not add names
                 has_wildcard = any(c.type == "*" for c in node.children)
                 if not (has_wildcard and source_node):
-                    exports_list.extend(_extract_export_names(node))
+                    exports_list.extend(_extract_export_names(node, source))
 
         # 3. Call expressions: import(...) or require(...)
         elif node_type == "call_expression":
@@ -325,7 +338,7 @@ def extract_file(path: str, source: bytes) -> FileFacts:
                 # Dynamic import(...)
                 if fn_node.type == "import":
                     if arg_exprs:
-                        spec = _extract_string_literal(arg_exprs[0])
+                        spec = _extract_string_literal(arg_exprs[0], source)
                         if spec is not None:
                             imports_list.append(
                                 ImportRef(
@@ -341,10 +354,10 @@ def extract_file(path: str, source: bytes) -> FileFacts:
                         unresolved_dynamic += 1
 
                 # require(...)
-                elif fn_node.type == "identifier" and fn_node.text == b"require":
+                elif fn_node.type == "identifier" and _node_bytes(fn_node, source) == b"require":
                     # Only treat require as a call to the bare identifier require
                     if arg_exprs:
-                        spec = _extract_string_literal(arg_exprs[0])
+                        spec = _extract_string_literal(arg_exprs[0], source)
                         if spec is not None:
                             imports_list.append(
                                 ImportRef(
@@ -359,8 +372,16 @@ def extract_file(path: str, source: bytes) -> FileFacts:
                     else:
                         unresolved_dynamic += 1
 
-        # Push children onto stack in reverse for source order traversal
-        stack.extend(reversed(node.children))
+        if descend and cursor.goto_first_child():
+            continue
+        if cursor.goto_next_sibling():
+            continue
+        while True:
+            if not cursor.goto_parent():
+                reached_root = True
+                break
+            if cursor.goto_next_sibling():
+                break
 
     # Sort outputs deterministically
     sorted_imports = tuple(

@@ -7,7 +7,8 @@ from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
-from app.config import Settings, get_settings
+from app.ai.tracing import flush_tracing
+from app.config import Settings, export_langsmith_env, get_settings
 from app.github.ingest import sweep_stale_fetching_repos
 from app.logging_setup import setup_logging
 from app.routes.auth import router as auth_router
@@ -20,11 +21,16 @@ from app.routes.settings import router as settings_router
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Lifespan hook to handle application startup and shutdown tasks."""
     settings = get_settings()
+    # Export LangSmith environment variables before first traced call
+    export_langsmith_env(settings)
     # Ensure DATA_DIR exists on startup
     Path(settings.DATA_DIR).mkdir(parents=True, exist_ok=True)
     # Recover any ingestion jobs interrupted if server was killed during fetching
     sweep_stale_fetching_repos()
-    yield
+    try:
+        yield
+    finally:
+        flush_tracing()
 
 
 def create_app() -> FastAPI:
@@ -63,6 +69,11 @@ def create_app() -> FastAPI:
     app.include_router(settings_router)
     app.include_router(repos_router)
     app.include_router(meta_router)
+
+    if settings.ENV == "development":
+        from app.routes.dev import router as dev_router
+
+        app.include_router(dev_router)
 
     @app.get("/health", tags=["Monitoring"])
     def health_check(
