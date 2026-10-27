@@ -248,10 +248,9 @@ class LLMClient:
                         continue
 
                     # 4xx handling (Non-retryable)
-                    if (
-                        isinstance(exc, (AuthenticationError, PermissionDeniedError))
-                        or status_code in (401, 403)
-                    ):
+                    if isinstance(
+                        exc, (AuthenticationError, PermissionDeniedError)
+                    ) or status_code in (401, 403):
                         raise LLMAuthError(
                             "Groq authentication failed or invalid API credentials"
                         ) from None
@@ -440,9 +439,7 @@ class LLMClient:
             async for chunk in stream_response:
                 choice = chunk.choices[0] if chunk.choices else None
                 delta_content = (
-                    getattr(choice.delta, "content", "")
-                    if choice and choice.delta
-                    else ""
+                    getattr(choice.delta, "content", "") if choice and choice.delta else ""
                 )
                 finish_reason = getattr(choice, "finish_reason", None) if choice else None
                 chunk_usage = None

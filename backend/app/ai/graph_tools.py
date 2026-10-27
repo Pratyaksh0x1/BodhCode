@@ -435,9 +435,7 @@ def read_file(
     actual_end_line = min(start_line + len(selected_lines) - 1, total_lines)
 
     # Format lines with numbers: "1: import ..."
-    formatted_lines = [
-        f"{start_line + idx}: {line}" for idx, line in enumerate(selected_lines)
-    ]
+    formatted_lines = [f"{start_line + idx}: {line}" for idx, line in enumerate(selected_lines)]
     content_str = "\n".join(formatted_lines)
 
     # Character cap: 12,000 characters
@@ -471,17 +469,12 @@ def get_graph_summary(graph: nx.DiGraph) -> dict[str, Any]:
             external_pkgs.add(pkg)
 
     # Fan-in ranking: in_degree counts direct importers
-    in_degrees = [
-        {"file": node, "dependents_count": deg}
-        for node, deg in graph.in_degree()
-    ]
+    in_degrees = [{"file": node, "dependents_count": deg} for node, deg in graph.in_degree()]
     in_degrees.sort(key=lambda x: (-x["dependents_count"], x["file"]))
     top_files = in_degrees[:10]
 
     # Cycles count: strongly connected components with >1 node
-    cycles_count = sum(
-        1 for scc in nx.strongly_connected_components(graph) if len(scc) > 1
-    )
+    cycles_count = sum(1 for scc in nx.strongly_connected_components(graph) if len(scc) > 1)
 
     return {
         "total_files": total_files,

@@ -19,9 +19,7 @@ _AUTOLINK_RE = re.compile(r"<https?://[^>]+>")
 _RAW_URL_RE = re.compile(r"https?://[a-zA-Z0-9\-._~:/?#\[\]@!$&'*+,;=%]+")
 _INLINE_CODE_RE = re.compile(r"`[^`\n]+`")
 _FULL_SHA_RE = re.compile(r"\b[0-9a-fA-F]{40}\b")
-_SHORT_SHA_RE = re.compile(
-    r"\b(?=[0-9a-fA-F]*[0-9])(?=[0-9a-fA-F]*[a-fA-F])[0-9a-fA-F]{7,12}\b"
-)
+_SHORT_SHA_RE = re.compile(r"\b(?=[0-9a-fA-F]*[0-9])(?=[0-9a-fA-F]*[a-fA-F])[0-9a-fA-F]{7,12}\b")
 _ISSUE_REF_RE = re.compile(r"(^|[\s\(\[])(#\d+)\b")
 _MENTION_RE = re.compile(r"(^|[\s\(\[])(@[a-zA-Z0-9](?:[a-zA-Z0-9]|-(?=[a-zA-Z0-9])){0,38})\b")
 

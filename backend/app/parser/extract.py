@@ -289,9 +289,7 @@ def extract_file(path: str, source: bytes) -> FileFacts:
                         )
                         if export_clause:
                             specifiers = [
-                                c
-                                for c in export_clause.children
-                                if c.type == "export_specifier"
+                                c for c in export_clause.children if c.type == "export_specifier"
                             ]
                             if specifiers and all(
                                 any(child.type == "type" for child in s.children)
@@ -384,9 +382,7 @@ def extract_file(path: str, source: bytes) -> FileFacts:
                 break
 
     # Sort outputs deterministically
-    sorted_imports = tuple(
-        sorted(imports_list, key=lambda x: (x.line, x.specifier, x.kind))
-    )
+    sorted_imports = tuple(sorted(imports_list, key=lambda x: (x.line, x.specifier, x.kind)))
     sorted_exports = tuple(sorted(set(exports_list)))
 
     return FileFacts(

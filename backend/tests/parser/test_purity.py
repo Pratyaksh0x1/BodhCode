@@ -39,15 +39,15 @@ def test_parser_purity_no_forbidden_imports_or_env() -> None:
             if isinstance(node, ast.Import):
                 for alias in node.names:
                     for forbidden in FORBIDDEN_MODULES:
-                        assert not alias.name.startswith(
-                            forbidden
-                        ), f"Forbidden import '{alias.name}' in {py_file.name}"
+                        assert not alias.name.startswith(forbidden), (
+                            f"Forbidden import '{alias.name}' in {py_file.name}"
+                        )
             elif isinstance(node, ast.ImportFrom):
                 mod = node.module or ""
                 for forbidden in FORBIDDEN_MODULES:
-                    assert not mod.startswith(
-                        forbidden
-                    ), f"Forbidden from-import '{mod}' in {py_file.name}"
+                    assert not mod.startswith(forbidden), (
+                        f"Forbidden from-import '{mod}' in {py_file.name}"
+                    )
             elif isinstance(node, ast.Attribute):
                 if node.attr in FORBIDDEN_CALLS_OR_ATTRS:
                     # Check if it's os.environ or os.getenv

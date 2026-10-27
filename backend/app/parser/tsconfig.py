@@ -171,9 +171,8 @@ def _resolve_config(
     extends_spec = data.get("extends")
     base_config: TsConfig | None = None
 
-    is_rel = (
-        isinstance(extends_spec, str)
-        and (extends_spec.startswith("./") or extends_spec.startswith("../"))
+    is_rel = isinstance(extends_spec, str) and (
+        extends_spec.startswith("./") or extends_spec.startswith("../")
     )
     if is_rel:
         base_path = _normalize_repo_path(dir_name, extends_spec)
@@ -184,9 +183,7 @@ def _resolve_config(
                 base_path = posixpath.join(base_path, "tsconfig.json")
 
         if base_path in files:
-            base_config = _resolve_config(
-                base_path, files, visited.copy(), depth + 1, warnings
-            )
+            base_config = _resolve_config(base_path, files, visited.copy(), depth + 1, warnings)
 
     merged_paths = dict(base_config.paths) if base_config else {}
     merged_paths.update(norm_paths)

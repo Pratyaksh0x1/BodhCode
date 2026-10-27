@@ -181,10 +181,7 @@ def verify_mentions(
 
         # 2. Suffix match
         # Must match either exact or "/suffix"
-        suffix_matches = [
-            node for node in node_ids
-            if node == cand or node.endswith("/" + cand)
-        ]
+        suffix_matches = [node for node in node_ids if node == cand or node.endswith("/" + cand)]
 
         if len(suffix_matches) == 1:
             verified[mention.raw] = suffix_matches[0]

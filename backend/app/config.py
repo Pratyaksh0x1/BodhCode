@@ -140,4 +140,3 @@ def export_langsmith_env(settings: Settings) -> None:
             os.environ["LANGSMITH_ENDPOINT"] = settings.LANGSMITH_ENDPOINT
     else:
         os.environ["LANGSMITH_TRACING"] = "false"
-

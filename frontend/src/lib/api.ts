@@ -3,12 +3,14 @@ import { VITE_API_URL } from "./env";
 export class ApiError extends Error {
   readonly status: number;
   readonly detail: string;
+  readonly body?: unknown;
 
-  constructor(status: number, detail: string) {
+  constructor(status: number, detail: string, body?: unknown) {
     super(`API Error ${status}: ${detail}`);
     this.name = "ApiError";
     this.status = status;
     this.detail = detail;
+    this.body = body;
   }
 }
 
@@ -36,8 +38,10 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (!response.ok) {
     let detail = response.statusText || "Request failed";
+    let body: unknown = undefined;
     try {
       const errorJson = (await response.json()) as { detail?: unknown };
+      body = errorJson;
       if (typeof errorJson?.detail === "string") {
         detail = errorJson.detail;
       } else if (errorJson?.detail) {
@@ -48,12 +52,13 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
         const text = await response.text();
         if (text) {
           detail = text;
+          body = text;
         }
       } catch {
         // Fallback to statusText
       }
     }
-    throw new ApiError(response.status, detail);
+    throw new ApiError(response.status, detail, body);
   }
 
   if (response.status === 204) {

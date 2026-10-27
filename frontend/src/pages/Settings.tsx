@@ -1,4 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import type { ReviewMode } from "../lib/auth";
+import { getUserActivity } from "../lib/push";
 import { useLanguages, useSettings } from "../lib/settings";
 import {
   resolveEditorTheme,
@@ -20,6 +23,11 @@ export function Settings() {
   const { user, isLoading, updateSettings, isUpdating, error } = useSettings();
   const { data: languages, isLoading: isLanguagesLoading } = useLanguages();
   const resolvedAppTheme = useThemeStore((s) => s.resolved);
+
+  const { data: activityLogs, isLoading: isActivityLoading } = useQuery({
+    queryKey: ["user", "activity"],
+    queryFn: () => getUserActivity(50),
+  });
 
   // Searchable language combobox state
   const [langSearch, setLangSearch] = useState("");
@@ -90,6 +98,12 @@ export function Settings() {
 
   const handleEditorThemeChange = (editor_theme: EditorThemePref) => {
     updateSettings({ editor_theme }, { onSuccess: triggerSaved });
+  };
+
+  const currentReviewMode: ReviewMode = (user?.review_mode as ReviewMode) || "review";
+
+  const handleReviewModeChange = (review_mode: ReviewMode) => {
+    updateSettings({ review_mode }, { onSuccess: triggerSaved });
   };
 
   // Resolved editor theme for static preview block
@@ -406,6 +420,165 @@ export function Settings() {
             </pre>
           </div>
         </div>
+      </section>
+
+      {/* SECTION 4: AI Coding Agent */}
+      <section
+        aria-labelledby="agent-section-heading"
+        className="p-6 rounded-2xl bg-white dark:bg-neutral-900/60 border border-neutral-200 dark:border-neutral-800 shadow-sm space-y-4"
+      >
+        <div className="space-y-1">
+          <h2
+            id="agent-section-heading"
+            className="text-base font-bold text-neutral-900 dark:text-neutral-100"
+          >
+            AI Coding Agent Review Policy
+          </h2>
+          <p className="text-xs text-neutral-500 dark:text-neutral-400">
+            Control how proposed code changes are reviewed before they are written to your working copy.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {(
+            [
+              {
+                value: "review" as const,
+                title: "Review every change",
+                badge: "Recommended",
+                desc: "Every edit or file creation becomes a proposal card with a diff and blast radius. You inspect and accept before files change.",
+              },
+              {
+                value: "auto" as const,
+                title: "Auto-accept edits",
+                badge: "Fast",
+                desc: "Creates and edits apply immediately with one-click Undo available. Deletions still queue for confirmation.",
+              },
+              {
+                value: "readonly" as const,
+                title: "Read-only plan",
+                badge: "Plan Only",
+                desc: "Agent cannot write files. Proposes plans, explanations, and architectural roadmaps in text only.",
+              },
+            ] as const
+          ).map((item) => {
+            const isSelected = currentReviewMode === item.value;
+            return (
+              <button
+                key={item.value}
+                type="button"
+                onClick={() => handleReviewModeChange(item.value)}
+                className={`p-4 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-3 ${
+                  isSelected
+                    ? "bg-orange-500/10 border-orange-500/40 text-neutral-900 dark:text-neutral-100 ring-2 ring-orange-500/20"
+                    : "bg-neutral-50 dark:bg-neutral-900/40 border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700 text-neutral-600 dark:text-neutral-400"
+                }`}
+              >
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-xs text-neutral-900 dark:text-neutral-100">
+                      {item.title}
+                    </span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-200 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 font-medium">
+                      {item.badge}
+                    </span>
+                  </div>
+                  <p className="text-[11px] leading-relaxed text-neutral-500 dark:text-neutral-400">
+                    {item.desc}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-1 text-[11px] font-medium">
+                  {isSelected ? (
+                    <span className="text-orange-500 flex items-center gap-1">
+                      <span>✓</span> Active Policy
+                    </span>
+                  ) : (
+                    <span className="text-neutral-400">Select</span>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* GitHub Outgoing Activity & Audit Log */}
+      <section className="space-y-4 pt-4 border-t border-neutral-200 dark:border-neutral-800">
+        <div>
+          <h2 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
+            <span>📜</span>
+            <span>GitHub Outgoing Activity Log</span>
+          </h2>
+          <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+            Audit history of branches, commits, pull requests, issues, and comments created by you on GitHub.
+          </p>
+        </div>
+
+        {isActivityLoading ? (
+          <div className="p-6 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/30 text-xs text-neutral-400 animate-pulse">
+            Loading activity history...
+          </div>
+        ) : !activityLogs || activityLogs.length === 0 ? (
+          <div className="p-8 rounded-xl border border-dashed border-neutral-200 dark:border-neutral-800 text-center text-xs text-neutral-500">
+            No outgoing GitHub activity recorded yet.
+          </div>
+        ) : (
+          <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900/50 divide-y divide-neutral-100 dark:divide-neutral-800 overflow-hidden text-xs">
+            {activityLogs.map((item) => (
+              <div key={item.id} className="p-3.5 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <span
+                    className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded ${
+                      item.action === "push"
+                        ? "bg-purple-500/10 text-purple-400 border border-purple-500/20"
+                        : item.action === "issue_create" || item.action === "issue"
+                        ? "bg-blue-500/10 text-blue-400 border border-blue-500/20"
+                        : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                    }`}
+                  >
+                    {item.action.replace("_", " ")}
+                  </span>
+
+                  <div>
+                    <div className="font-medium text-neutral-800 dark:text-neutral-200 flex items-center gap-2">
+                      {item.target_url ? (
+                        <a
+                          href={item.target_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-orange-500 hover:text-orange-400 underline flex items-center gap-1 font-mono text-[11px]"
+                        >
+                          <span>{item.target_url}</span>
+                          <span>&nearr;</span>
+                        </a>
+                      ) : (
+                        <span className="text-neutral-400 font-mono text-[11px]">
+                          Action recorded
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[10px] text-neutral-400 font-mono">
+                      {new Date(item.created_at).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+
+                <span
+                  className={`text-[10px] font-semibold px-2 py-0.5 rounded ${
+                    item.status === "succeeded"
+                      ? "bg-emerald-500/10 text-emerald-500"
+                      : item.status === "failed"
+                      ? "bg-rose-500/10 text-rose-500"
+                      : "bg-neutral-500/10 text-neutral-400"
+                  }`}
+                >
+                  {item.status.toUpperCase()}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );

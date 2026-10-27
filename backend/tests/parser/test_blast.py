@@ -169,22 +169,26 @@ def test_cycles_detection() -> None:
     """Verify cycles detection on circular graph, diamond graph, and self-loops."""
     # 1. Circular graph a -> b -> c -> a
     g_cycle = nx.DiGraph()
-    g_cycle.add_edges_from([
-        ("src/a.ts", "src/b.ts"),
-        ("src/b.ts", "src/c.ts"),
-        ("src/c.ts", "src/a.ts"),
-    ])
+    g_cycle.add_edges_from(
+        [
+            ("src/a.ts", "src/b.ts"),
+            ("src/b.ts", "src/c.ts"),
+            ("src/c.ts", "src/a.ts"),
+        ]
+    )
     cycles = find_cycles(g_cycle)
     assert cycles == [["src/a.ts", "src/b.ts", "src/c.ts"]]
 
     # 2. No false positives on diamond
     g_diamond = nx.DiGraph()
-    g_diamond.add_edges_from([
-        ("src/T.ts", "src/L.ts"),
-        ("src/T.ts", "src/R.ts"),
-        ("src/L.ts", "src/S.ts"),
-        ("src/R.ts", "src/S.ts"),
-    ])
+    g_diamond.add_edges_from(
+        [
+            ("src/T.ts", "src/L.ts"),
+            ("src/T.ts", "src/R.ts"),
+            ("src/L.ts", "src/S.ts"),
+            ("src/R.ts", "src/S.ts"),
+        ]
+    )
     assert find_cycles(g_diamond) == []
 
     # 3. Single self-loop node

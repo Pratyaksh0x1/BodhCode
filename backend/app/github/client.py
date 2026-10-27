@@ -364,4 +364,3 @@ class GitHubClient:
         all_comments = conv["items"] + review_sanitized
         all_comments.sort(key=lambda c: c.get("created_at") or "")
         return {"items": all_comments, "next_page": conv.get("next_page")}
-

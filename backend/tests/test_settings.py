@@ -215,9 +215,7 @@ def test_settings_validation_errors(client: TestClient, db_session: Session):
         assert "Unsupported language code" in resp_lang.text
 
         # Invalid theme -> 422
-        resp_theme = client.patch(
-            "/auth/me/settings", json={"theme": "solarized"}, headers=headers
-        )
+        resp_theme = client.patch("/auth/me/settings", json={"theme": "solarized"}, headers=headers)
         assert resp_theme.status_code == 422
         assert "Invalid theme" in resp_theme.text
 

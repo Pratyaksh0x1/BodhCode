@@ -3,18 +3,26 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.ai.tracing import flush_tracing
+from app.auth.scope import ScopeRequiredError, TokenRevokedError
 from app.config import Settings, export_langsmith_env, get_settings
 from app.github.ingest import sweep_stale_fetching_repos
 from app.logging_setup import setup_logging
+from app.routes.activity import router as activity_router
+from app.routes.agent import router as agent_router
 from app.routes.auth import router as auth_router
 from app.routes.content import router as content_router
 from app.routes.explain_chat import router as explain_chat_router
+from app.routes.files import router as files_router
+from app.routes.issues import router as issues_router
 from app.routes.meta import router as meta_router
+from app.routes.proposals import router as proposals_router
+from app.routes.push import router as push_router
 from app.routes.repos import router as repos_router
 from app.routes.settings import router as settings_router
 
@@ -63,8 +71,26 @@ def create_app() -> FastAPI:
         allow_origins=[settings.FRONTEND_URL],
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-        allow_headers=["Content-Type", "X-Requested-With"],
+        allow_headers=["Content-Type", "X-Requested-With", "If-Match"],
     )
+
+    @app.exception_handler(ScopeRequiredError)
+    async def scope_required_handler(
+        request: Request, exc: ScopeRequiredError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": "scope_required", "needed": exc.needed},
+        )
+
+    @app.exception_handler(TokenRevokedError)
+    async def token_revoked_handler(
+        request: Request, exc: TokenRevokedError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": exc.detail},
+        )
 
     # Register modular routers
     app.include_router(auth_router)
@@ -72,7 +98,13 @@ def create_app() -> FastAPI:
     app.include_router(repos_router)
     app.include_router(content_router)
     app.include_router(explain_chat_router)
+    app.include_router(files_router)
     app.include_router(meta_router)
+    app.include_router(agent_router)
+    app.include_router(proposals_router)
+    app.include_router(push_router)
+    app.include_router(issues_router)
+    app.include_router(activity_router)
 
     if settings.ENV == "development":
         from app.routes.dev import router as dev_router

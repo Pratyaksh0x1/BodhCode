@@ -19,7 +19,7 @@ def test_mask_round_trip():
         "```\n\n"
         "Error trace:\n"
         "at Object.<anonymous> (/app/src/index.js:14:11)\n\n"
-        "<div class=\"warning\">Please read carefully</div>\n"
+        '<div class="warning">Please read carefully</div>\n'
     )
 
     masked, mapping = mask_protected(sample)
@@ -33,7 +33,7 @@ def test_mask_round_trip():
     assert "#42" not in masked
     assert "7f3b89a0c1d2e3f4a5b6c7d8e9f0123456789abc" not in masked
     assert "at Object.<anonymous>" not in masked
-    assert "<div class=\"warning\">" not in masked
+    assert '<div class="warning">' not in masked
 
     # But prose and link text SHOULD remain unmasked
     assert "Sample Document" in masked

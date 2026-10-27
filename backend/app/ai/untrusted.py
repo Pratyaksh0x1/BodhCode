@@ -20,9 +20,7 @@ _CLOSING_TAG_PATTERN: re.Pattern[str] = re.compile(
 def strip_control_chars(text: str) -> str:
     """Remove non-printing control characters except newlines (\\n, \\r) and tabs (\\t)."""
     return "".join(
-        c
-        for c in text
-        if c in ("\n", "\r", "\t") or not unicodedata.category(c).startswith("C")
+        c for c in text if c in ("\n", "\r", "\t") or not unicodedata.category(c).startswith("C")
     )
 
 
@@ -41,5 +39,5 @@ def wrap_untrusted(text: str, kind: str) -> str:
     cleaned = strip_control_chars(text)
     # Neutralize closing tags by escaping the opening '<'
     neutralized = _CLOSING_TAG_PATTERN.sub("&lt;/untrusted_data&gt;", cleaned)
-    safe_kind = re.sub(r'[^a-zA-Z0-9_\-]', '', kind.strip()) or "data"
+    safe_kind = re.sub(r"[^a-zA-Z0-9_\-]", "", kind.strip()) or "data"
     return f'<untrusted_data kind="{safe_kind}">\n{neutralized}\n</untrusted_data>'

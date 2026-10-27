@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "./api";
-import { AUTH_QUERY_KEY, useMe, type User } from "./auth";
+import { AUTH_QUERY_KEY, useMe, type ReviewMode, type User } from "./auth";
 import { applyTheme, setStoredTheme, type EditorThemePref, type ThemePref } from "./theme";
 
 export interface Language {
@@ -14,6 +14,7 @@ export interface UserSettingsPayload {
   preferred_language?: string;
   theme?: ThemePref;
   editor_theme?: EditorThemePref;
+  review_mode?: ReviewMode;
 }
 
 export const LANGUAGES_QUERY_KEY = ["meta", "languages"] as const;

@@ -28,6 +28,7 @@ class Repo(SQLModel, table=True):
     ingest_version: int = Field(default=INGEST_VERSION)
     source_language: str | None = Field(default=None, max_length=16)
     source_language_confidence: float | None = Field(default=None)
+    push_language_override: str | None = Field(default=None, max_length=16)
     created_at: datetime = Field(default_factory=utc_now)
     updated_at: datetime = Field(default_factory=utc_now)
 
@@ -49,6 +50,7 @@ class RepoRead(SQLModel):
     ingest_version: int
     source_language: str | None = None
     source_language_confidence: float | None = None
+    push_language_override: str | None = None
     created_at: datetime
     updated_at: datetime
 

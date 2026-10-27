@@ -15,6 +15,7 @@ router = APIRouter(prefix="/auth", tags=["Settings"])
 
 THEME_VALUES: tuple[str, ...] = ("system", "light", "dark")
 EDITOR_THEME_VALUES: tuple[str, ...] = ("auto", "vs", "vs-dark", "hc-black", "hc-light")
+REVIEW_MODE_VALUES: tuple[str, ...] = ("review", "auto", "readonly")
 
 
 class UserSettings(BaseModel):
@@ -29,6 +30,7 @@ class UserSettings(BaseModel):
     preferred_language: str | None = None
     theme: str | None = None
     editor_theme: str | None = None
+    review_mode: str | None = None
 
     @field_validator("preferred_language")
     @classmethod
@@ -48,9 +50,7 @@ class UserSettings(BaseModel):
         if v is not None:
             clean_theme = v.lower().strip()
             if clean_theme not in THEME_VALUES:
-                raise ValueError(
-                    f"Invalid theme '{v}'. Allowed values: {', '.join(THEME_VALUES)}."
-                )
+                raise ValueError(f"Invalid theme '{v}'. Allowed values: {', '.join(THEME_VALUES)}.")
             return clean_theme
         return v
 
@@ -64,6 +64,18 @@ class UserSettings(BaseModel):
                     f"Invalid editor_theme '{v}'. Allowed values: {', '.join(EDITOR_THEME_VALUES)}."
                 )
             return clean_theme
+        return v
+
+    @field_validator("review_mode")
+    @classmethod
+    def validate_review_mode(cls, v: str | None) -> str | None:
+        if v is not None:
+            clean_mode = v.lower().strip()
+            if clean_mode not in REVIEW_MODE_VALUES:
+                raise ValueError(
+                    f"Invalid review_mode '{v}'. Allowed values: {', '.join(REVIEW_MODE_VALUES)}."
+                )
+            return clean_mode
         return v
 
 

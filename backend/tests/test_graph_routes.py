@@ -10,6 +10,7 @@ from sqlmodel import Session, select
 from app.auth.crypto import encrypt_token
 from app.auth.deps import get_current_user
 from app.config import get_settings
+from app.github.limits import INGEST_VERSION
 from app.main import app
 from app.models.graph import RepoGraph
 from app.models.repo import Repo
@@ -463,7 +464,7 @@ def test_analyze_job_end_to_end(
     # Set up simulated Phase 3 extracted directory
     repo_src = tmp_path / "repos" / owner / name / commit_sha / "src"
     repo_src.mkdir(parents=True, exist_ok=True)
-    (repo_src / ".ingest_version").write_text("1", encoding="utf-8")
+    (repo_src / ".ingest_version").write_text(str(INGEST_VERSION), encoding="utf-8")
     (repo_src / "tsconfig.json").write_text('{"compilerOptions": {"baseUrl": "."}}')
     (repo_src / "a.ts").write_text('import { b } from "./b";\nexport const a = b;')
     (repo_src / "b.ts").write_text("export const b = 42;")

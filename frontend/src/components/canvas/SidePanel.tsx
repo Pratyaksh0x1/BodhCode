@@ -1,5 +1,6 @@
 import { memo, useEffect, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
+import { useNavigate } from "react-router-dom";
 import { useReactFlow } from "@xyflow/react";
 import { useGraphStore } from "../../store/graphStore";
 import {
@@ -17,6 +18,7 @@ interface SidePanelProps {
 }
 
 export const SidePanel = memo(function SidePanel({ repoId }: SidePanelProps) {
+  const navigate = useNavigate();
   const graph = useGraphContext();
   const selectedFileId = useGraphStore((s) => s.selectedFileId);
   const select = useGraphStore((s) => s.select);
@@ -609,13 +611,17 @@ export const SidePanel = memo(function SidePanel({ repoId }: SidePanelProps) {
           )}
         </div>
 
-        {/* Open in editor (Disabled button per Phase 6 requirements) */}
+        {/* Open in editor (Phase 11) */}
         <div className="pt-2 border-t border-neutral-200 dark:border-neutral-800">
           <button
             type="button"
-            disabled
-            title="Available in a later phase"
-            className="w-full py-2 px-3 rounded-lg text-xs font-semibold bg-neutral-200 dark:bg-neutral-800 text-neutral-400 dark:text-neutral-500 cursor-not-allowed border border-neutral-300 dark:border-neutral-700 flex items-center justify-center gap-2"
+            onClick={() => {
+              if (selectedNode) {
+                navigate(`/repos/${repoId}/editor?file=${encodeURIComponent(selectedNode.id)}`);
+              }
+            }}
+            title="Open in editor"
+            className="w-full py-2 px-3 rounded-lg text-xs font-semibold bg-orange-600 hover:bg-orange-500 text-white border border-orange-500 flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-sm"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path

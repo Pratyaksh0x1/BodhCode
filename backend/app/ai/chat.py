@@ -13,9 +13,9 @@ import networkx as nx
 from fastapi import Request
 from pydantic import BaseModel, Field
 
-from app.ai.graph_tools import GRAPH_TOOL_SCHEMAS, GraphTools
 from app.ai.llm import LLMClient, LLMResult, get_llm_client
 from app.ai.prompts.chat import CHAT_PROMPT_VERSION, build_chat_system_message
+from app.ai.tools import ToolContext, ToolResult, build_read_tools_registry
 from app.ai.untrusted import truncate
 from app.ai.verify import extract_path_mentions, verify_mentions
 
@@ -100,7 +100,16 @@ async def run_chat_stream(
 ) -> AsyncIterator[str]:
     """Execute iterative tool calling loop and stream SSE events to client."""
     client = llm_client or get_llm_client()
-    graph_tools = GraphTools(graph=graph, source_dir=source_dir)
+    registry = build_read_tools_registry()
+    tool_ctx = ToolContext(
+        user=None,
+        repo=None,
+        graph=graph,
+        files=None,
+        review_mode="readonly",
+        source_dir=source_dir,
+    )
+    tools_schemas = registry.schemas()
 
     step_count = 0
     total_prompt_tokens = 0
@@ -117,7 +126,7 @@ async def run_chat_stream(
 
             llm_result: LLMResult = await client.chat(
                 messages=conversation,
-                tools=GRAPH_TOOL_SCHEMAS,
+                tools=tools_schemas,
                 feature="chat.loop",
                 temperature=0.1,
                 max_tokens=1024,
@@ -135,12 +144,24 @@ async def run_chat_stream(
 
             # Execute tool calls
             assistant_tool_calls_payload = []
+            executed_results: list[tuple[Any, dict[str, Any]]] = []
+
             for tc in llm_result.tool_calls:
                 step_count += 1
                 args_summary = truncate(json.dumps(tc.arguments), max_chars=120)
 
-                tool_output = graph_tools.execute(tc.name, tc.arguments)
-                is_ok = "error" not in tool_output
+                tool_result: ToolResult = await registry.dispatch(tool_ctx, tc.name, tc.arguments)
+                tool_output = (
+                    tool_result.data
+                    if tool_result.ok
+                    else (
+                        tool_result.data
+                        if "error" in tool_result.data
+                        else {"error": tool_result.error or "Tool execution failed"}
+                    )
+                )
+                executed_results.append((tc, tool_output))
+
                 result_summary = truncate(json.dumps(tool_output), max_chars=200)
 
                 # Emit step SSE event
@@ -149,7 +170,7 @@ async def run_chat_stream(
                     "id": tc.id,
                     "tool": tc.name,
                     "args_summary": args_summary,
-                    "ok": is_ok,
+                    "ok": tool_result.ok,
                     "result_summary": result_summary,
                 }
                 yield f"data: {json.dumps(step_event)}\n\n"
@@ -165,6 +186,9 @@ async def run_chat_stream(
                     }
                 )
 
+                if step_count >= MAX_TOOL_STEPS:
+                    break
+
             # Append assistant message with tool calls
             conversation.append(
                 {
@@ -175,8 +199,7 @@ async def run_chat_stream(
             )
 
             # Append tool outputs
-            for tc in llm_result.tool_calls:
-                tool_output = graph_tools.execute(tc.name, tc.arguments)
+            for tc, tool_output in executed_results:
                 conversation.append(
                     {
                         "role": "tool",

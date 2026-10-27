@@ -3,6 +3,8 @@ import { useCallback } from "react";
 import { api, ApiError } from "./api";
 import { applyTheme, setStoredTheme, type ThemePref } from "./theme";
 
+export type ReviewMode = "review" | "auto" | "readonly";
+
 export interface User {
   id: number;
   login: string;
@@ -12,6 +14,7 @@ export interface User {
   preferred_language: string;
   theme: "system" | "light" | "dark" | string;
   editor_theme: "auto" | "vs" | "vs-dark" | "hc-black" | "hc-light" | string;
+  review_mode?: ReviewMode;
 }
 
 export const AUTH_QUERY_KEY = ["auth", "me"] as const;

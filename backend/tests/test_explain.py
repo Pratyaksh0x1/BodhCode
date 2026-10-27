@@ -1,6 +1,5 @@
 """Unit and integration tests for grounded file explanation."""
 
-
 import networkx as nx
 import pytest
 from sqlmodel import Session

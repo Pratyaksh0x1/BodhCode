@@ -65,9 +65,7 @@ def build_explain_messages(
     else:
         user_parts.append("Source Code: (not available)")
 
-    user_parts.append(
-        f"Please explain `{file_path}`'s role, dependencies, and risk in {language}."
-    )
+    user_parts.append(f"Please explain `{file_path}`'s role, dependencies, and risk in {language}.")
 
     return [
         {"role": "system", "content": system_content},

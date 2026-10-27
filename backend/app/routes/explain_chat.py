@@ -194,11 +194,13 @@ async def chat_endpoint(
 
                 elapsed = asyncio.get_event_loop().time() - start_time
                 if elapsed > timeout_seconds:
-                    timeout_payload = json.dumps({
-                        "type": "error",
-                        "code": "timeout",
-                        "message": "Chat turn timed out after 120 seconds.",
-                    })
+                    timeout_payload = json.dumps(
+                        {
+                            "type": "error",
+                            "code": "timeout",
+                            "message": "Chat turn timed out after 120 seconds.",
+                        }
+                    )
                     yield f"data: {timeout_payload}\n\n"
                     break
 

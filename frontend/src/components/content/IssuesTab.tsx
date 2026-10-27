@@ -1,6 +1,9 @@
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRepoIssueDetail, useRepoIssues } from "../../lib/repos";
+import { CreateIssueModal } from "./CreateIssueModal";
+import { CommentComposer } from "./CommentComposer";
 
 interface IssuesTabProps {
   repoId: number | string;
@@ -8,9 +11,11 @@ interface IssuesTabProps {
 }
 
 export function IssuesTab({ repoId, preferredLanguage }: IssuesTabProps) {
+  const queryClient = useQueryClient();
   const [filterState, setFilterState] = useState<"open" | "closed" | "all">("open");
   const [page, setPage] = useState(1);
   const [selectedIssueNumber, setSelectedIssueNumber] = useState<number | null>(null);
+  const [isNewIssueOpen, setIsNewIssueOpen] = useState(false);
 
   const { data: issuesData, isLoading, isError, error } = useRepoIssues(
     repoId,
@@ -44,8 +49,15 @@ export function IssuesTab({ repoId, preferredLanguage }: IssuesTabProps) {
           ))}
         </div>
 
-        {/* Pagination buttons */}
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsNewIssueOpen(true)}
+            className="px-3 py-1 rounded-lg font-semibold bg-orange-500 hover:bg-orange-600 text-white flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm shadow-orange-500/20"
+          >
+            <span>+</span>
+            <span>New Issue</span>
+          </button>
           <button
             type="button"
             disabled={page <= 1}
@@ -189,6 +201,18 @@ export function IssuesTab({ repoId, preferredLanguage }: IssuesTabProps) {
           })}
         </div>
       )}
+
+      {/* Create Issue Wizard Modal */}
+      <CreateIssueModal
+        isOpen={isNewIssueOpen}
+        onClose={() => setIsNewIssueOpen(false)}
+        repoId={repoId}
+        repoIdentifier={`Repo #${repoId}`}
+        userPreferredLanguage={preferredLanguage}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ["repo", String(repoId), "issues"] });
+        }}
+      />
     </div>
   );
 }
@@ -202,6 +226,7 @@ function IssueDetailSection({
   issueNumber: number;
   preferredLanguage?: string;
 }) {
+  const queryClient = useQueryClient();
   const [showOriginalBody, setShowOriginalBody] = useState(false);
   const [originalCommentsMap, setOriginalCommentsMap] = useState<Record<number, boolean>>({});
 
@@ -355,6 +380,18 @@ function IssueDetailSection({
           </div>
         </div>
       )}
+
+      {/* Reply Comment Box */}
+      <CommentComposer
+        repoId={repoId}
+        issueNumber={issueNumber}
+        userPreferredLanguage={preferredLanguage}
+        onCommentPosted={() => {
+          queryClient.invalidateQueries({
+            queryKey: ["repo", String(repoId), "issue", String(issueNumber)],
+          });
+        }}
+      />
     </div>
   );
 }

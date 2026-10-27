@@ -26,6 +26,7 @@ def traced(
     Automatically redacts secrets from inputs and outputs and nests child runs.
     Fails open if LangSmith encounters errors.
     """
+
     def decorator(fn: Callable[P, R]) -> Callable[P, R]:
         try:
             traced_fn = traceable(
@@ -95,6 +96,7 @@ def flush_tracing() -> None:
 
     try:
         from langsmith import Client
+
         client = Client()
         if hasattr(client, "flush"):
             client.flush()

@@ -58,6 +58,8 @@ const mockGraph: GraphDoc = {
   },
 };
 
+import { MemoryRouter } from "react-router-dom";
+
 function renderWithProviders(ui: React.ReactElement) {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -68,9 +70,11 @@ function renderWithProviders(ui: React.ReactElement) {
 
   return render(
     <QueryClientProvider client={queryClient}>
-      <GraphContext.Provider value={mockGraph}>
-        <ReactFlowProvider>{ui}</ReactFlowProvider>
-      </GraphContext.Provider>
+      <MemoryRouter>
+        <GraphContext.Provider value={mockGraph}>
+          <ReactFlowProvider>{ui}</ReactFlowProvider>
+        </GraphContext.Provider>
+      </MemoryRouter>
     </QueryClientProvider>
   );
 }
