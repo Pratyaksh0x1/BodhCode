@@ -11,13 +11,13 @@ from app.parser.types import FileFacts, ImportRef
 # Maximum file size for AST analysis: 1 MB
 MAX_SOURCE_BYTES = 1_000_000
 
-# Module-level lazy parser cache
-_PARSERS: dict[str, Parser] = {}
+# Module-level lazy language cache
+_LANGUAGES: dict[str, Language] = {}
 
 
 def _get_parser(lang_key: str) -> Parser:
-    """Retrieve or initialize reusable Parser instance for given language key."""
-    if lang_key not in _PARSERS:
+    """Retrieve or initialize Parser instance for given language key."""
+    if lang_key not in _LANGUAGES:
         if lang_key == "typescript":
             lang = Language(ts_ts.language_typescript())
         elif lang_key == "tsx":
@@ -26,8 +26,8 @@ def _get_parser(lang_key: str) -> Parser:
             lang = Language(ts_js.language())
         else:
             raise ValueError(f"Unsupported grammar language: {lang_key}")
-        _PARSERS[lang_key] = Parser(lang)
-    return _PARSERS[lang_key]
+        _LANGUAGES[lang_key] = lang
+    return Parser(_LANGUAGES[lang_key])
 
 
 def _extract_string_literal(node: Node) -> str | None:

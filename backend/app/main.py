@@ -11,7 +11,9 @@ from app.config import Settings, get_settings
 from app.github.ingest import sweep_stale_fetching_repos
 from app.logging_setup import setup_logging
 from app.routes.auth import router as auth_router
+from app.routes.meta import router as meta_router
 from app.routes.repos import router as repos_router
+from app.routes.settings import router as settings_router
 
 
 @asynccontextmanager
@@ -58,7 +60,9 @@ def create_app() -> FastAPI:
 
     # Register modular routers
     app.include_router(auth_router)
+    app.include_router(settings_router)
     app.include_router(repos_router)
+    app.include_router(meta_router)
 
     @app.get("/health", tags=["Monitoring"])
     def health_check(

@@ -2,6 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import { Link, Outlet, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useLogout, useMe } from "../lib/auth";
 import { VITE_API_URL } from "../lib/env";
+import {
+  applyTheme,
+  getStoredTheme,
+  setStoredTheme,
+  useThemeStore,
+} from "../lib/theme";
+import type { ThemePref } from "../lib/theme";
 
 export function Layout() {
   const { data: user, isLoading } = useMe();
@@ -12,6 +19,28 @@ export function Layout() {
 
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  const resolvedTheme = useThemeStore((s) => s.resolved);
+
+  // Sync theme on initial layout mount and on user changes
+  useEffect(() => {
+    if (user?.theme) {
+      const serverTheme = user.theme as ThemePref;
+      setStoredTheme(serverTheme);
+      applyTheme(serverTheme);
+    } else {
+      const localTheme = getStoredTheme();
+      applyTheme(localTheme);
+    }
+  }, [user?.theme]);
+
+  const handleToggleTheme = () => {
+    // For signed-out visitors (or instant toggle): cycles light/dark locally
+    const current = resolvedTheme;
+    const next: ThemePref = current === "dark" ? "light" : "dark";
+    setStoredTheme(next);
+    applyTheme(next);
+  };
 
   const authError = searchParams.get("auth_error");
   const authRequired =
@@ -51,8 +80,8 @@ export function Layout() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col font-sans">
-      <header className="border-b border-neutral-800 bg-neutral-900/80 backdrop-blur px-6 py-4 flex items-center justify-between sticky top-0 z-50">
+    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 flex flex-col font-sans transition-colors duration-150">
+      <header className="border-b border-neutral-200 dark:border-neutral-800 bg-white/80 dark:bg-neutral-900/80 backdrop-blur px-6 py-4 flex items-center justify-between sticky top-0 z-50 transition-colors duration-150">
         <div className="flex items-center gap-3">
           <Link
             to="/"
@@ -68,29 +97,59 @@ export function Layout() {
               BodhCode
             </span>
           </Link>
-          <span className="text-xs px-2 py-0.5 rounded-full bg-neutral-800 text-neutral-400 border border-neutral-700 font-mono">
+          <span className="text-xs px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 font-mono">
             v0.1.0-alpha
           </span>
         </div>
 
-        <div id="header-actions" className="flex items-center gap-4">
+        <div id="header-actions" className="flex items-center gap-3">
+          {/* Header Theme Toggle (works for signed-out visitors and signed-in users) */}
+          <button
+            id="header-theme-toggle"
+            type="button"
+            onClick={handleToggleTheme}
+            aria-label="Toggle light and dark theme"
+            title={`Switch to ${resolvedTheme === "dark" ? "light" : "dark"} mode`}
+            className="p-2 rounded-lg text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 border border-neutral-200 dark:border-neutral-800 transition-colors cursor-pointer"
+          >
+            {resolvedTheme === "dark" ? (
+              <svg className="w-4 h-4 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+                />
+              </svg>
+            ) : (
+              <svg className="w-4 h-4 text-neutral-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+                />
+              </svg>
+            )}
+          </button>
+
           {isLoading ? (
-            <div className="w-8 h-8 rounded-full bg-neutral-800 animate-pulse" />
+            <div className="w-8 h-8 rounded-full bg-neutral-200 dark:bg-neutral-800 animate-pulse" />
           ) : user ? (
             <div className="relative" ref={menuRef}>
               <button
                 id="user-menu-btn"
                 onClick={() => setMenuOpen((prev) => !prev)}
-                className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500/50"
+                className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-white dark:bg-neutral-900 hover:bg-neutral-100 dark:hover:bg-neutral-800 border border-neutral-200 dark:border-neutral-800 text-neutral-900 dark:text-neutral-200 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500/50 cursor-pointer"
                 aria-expanded={menuOpen}
                 aria-haspopup="true"
               >
                 <img
                   src={user.avatar_url}
                   alt={user.login}
-                  className="w-6 h-6 rounded-full border border-neutral-700 object-cover"
+                  className="w-6 h-6 rounded-full border border-neutral-300 dark:border-neutral-700 object-cover"
                 />
-                <span className="text-sm font-medium text-neutral-200">{user.login}</span>
+                <span className="text-sm font-medium">{user.login}</span>
                 <svg
                   className={`w-3.5 h-3.5 text-neutral-400 transition-transform ${menuOpen ? "rotate-180" : ""}`}
                   fill="none"
@@ -104,23 +163,23 @@ export function Layout() {
               {menuOpen && (
                 <div
                   id="user-menu-dropdown"
-                  className="absolute right-0 mt-2 w-48 py-1.5 bg-neutral-900 border border-neutral-800 rounded-lg shadow-xl z-50 backdrop-blur"
+                  className="absolute right-0 mt-2 w-48 py-1.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg shadow-xl z-50 backdrop-blur"
                 >
-                  <div className="px-3 py-2 border-b border-neutral-800/80 text-xs">
-                    <p className="text-neutral-400 font-medium">Signed in as</p>
-                    <p className="text-neutral-200 font-semibold truncate">{user.login}</p>
+                  <div className="px-3 py-2 border-b border-neutral-200 dark:border-neutral-800/80 text-xs">
+                    <p className="text-neutral-500 dark:text-neutral-400 font-medium">Signed in as</p>
+                    <p className="text-neutral-900 dark:text-neutral-200 font-semibold truncate">{user.login}</p>
                   </div>
                   <Link
                     to="/settings"
                     onClick={() => setMenuOpen(false)}
-                    className="block px-3 py-2 text-sm text-neutral-300 hover:bg-neutral-800 hover:text-neutral-100 transition-colors"
+                    className="block px-3 py-2 text-sm text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-neutral-100 transition-colors"
                   >
                     Settings
                   </Link>
                   <button
                     id="logout-btn"
                     onClick={handleLogout}
-                    className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-red-950/40 hover:text-red-300 transition-colors"
+                    className="w-full text-left px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-700 dark:hover:text-red-300 transition-colors cursor-pointer"
                   >
                     Logout
                   </button>
@@ -196,7 +255,7 @@ export function Layout() {
         <Outlet />
       </main>
 
-      <footer className="border-t border-slate-900 py-4 text-center text-xs text-slate-500">
+      <footer className="border-t border-neutral-200 dark:border-neutral-800 py-4 text-center text-xs text-neutral-500">
         BodhCode &copy; {new Date().getFullYear()} &mdash; Interactive Repository Dependency Mapping
       </footer>
     </div>

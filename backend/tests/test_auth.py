@@ -133,6 +133,7 @@ def test_callback_replaces_attacker_session_and_authenticates(
     assert user_data["avatar_url"] == "https://avatars.githubusercontent.com/u/112233"
     assert user_data["preferred_language"] == "en"
     assert user_data["theme"] == "dark"
+    assert user_data["editor_theme"] == "auto"
 
     # CRITICAL: Verify NO secret token fields are returned
     assert "encrypted_github_token" not in user_data

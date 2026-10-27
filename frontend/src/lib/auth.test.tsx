@@ -39,6 +39,7 @@ describe("auth and RequireAuth", () => {
       email: "test@example.com",
       preferred_language: "en",
       theme: "dark",
+      editor_theme: "auto",
     };
 
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
