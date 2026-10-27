@@ -26,6 +26,8 @@ class Repo(SQLModel, table=True):
     file_count: int = Field(default=0)
     default_branch_size_kb: int = Field(default=0)
     ingest_version: int = Field(default=INGEST_VERSION)
+    source_language: str | None = Field(default=None, max_length=16)
+    source_language_confidence: float | None = Field(default=None)
     created_at: datetime = Field(default_factory=utc_now)
     updated_at: datetime = Field(default_factory=utc_now)
 
@@ -45,6 +47,8 @@ class RepoRead(SQLModel):
     file_count: int
     default_branch_size_kb: int
     ingest_version: int
+    source_language: str | None = None
+    source_language_confidence: float | None = None
     created_at: datetime
     updated_at: datetime
 

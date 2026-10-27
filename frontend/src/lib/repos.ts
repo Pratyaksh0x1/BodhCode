@@ -13,6 +13,8 @@ export interface Repo {
   status: "queued" | "fetching" | "fetched" | "analyzing" | "ready" | "failed";
   error_code: string | null;
   error_message: string | null;
+  source_language?: string | null;
+  source_language_confidence?: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -275,4 +277,161 @@ export function useFileBlastMutation(repoId: number | string | undefined) {
       ),
   });
 }
+
+// ---------------------------------------------------------------------------
+// Phase 9: Translation & GitHub Content
+// ---------------------------------------------------------------------------
+
+export interface ReadmeData {
+  file_name: string;
+  original: string;
+  translated: string | null;
+  source_lang: string | null;
+  target_lang: string;
+  translated_ok: boolean;
+  reason?: string | null;
+}
+
+export interface IssueItem {
+  number: number;
+  title: string;
+  original_title: string;
+  translated_title: string | null;
+  state: string;
+  author: {
+    login: string;
+    avatar_url: string;
+  };
+  created_at: string | null;
+  updated_at: string | null;
+  labels: Array<{ name: string; color: string }>;
+  comment_count: number;
+  html_url: string;
+}
+
+export interface IssueListResponse {
+  items: IssueItem[];
+  next_page: number | null;
+  source_lang: string | null;
+  target_lang: string;
+}
+
+export interface CommentItem {
+  id: number | null;
+  original_body: string;
+  translated_body: string | null;
+  translated_ok: boolean;
+  author: {
+    login: string;
+    avatar_url: string;
+  };
+  created_at: string | null;
+  updated_at: string | null;
+  html_url: string;
+}
+
+export interface IssueDetailResponse extends IssueItem {
+  original_body: string;
+  translated_body: string | null;
+  translated_ok: boolean;
+  comments: CommentItem[];
+  source_lang: string | null;
+  target_lang: string;
+}
+
+export function useRepoReadme(
+  repoId: number | string | undefined,
+  lang?: string,
+  refresh: boolean = false
+) {
+  return useQuery<ReadmeData, Error>({
+    queryKey: ["repo-readme", repoId, lang, refresh],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (lang) params.set("lang", lang);
+      if (refresh) params.set("refresh", "true");
+      const qs = params.toString();
+      return api<ReadmeData>(`/repos/${repoId}/readme${qs ? `?${qs}` : ""}`);
+    },
+    enabled: Boolean(repoId),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useRepoIssues(
+  repoId: number | string | undefined,
+  state: string = "open",
+  page: number = 1,
+  lang?: string
+) {
+  return useQuery<IssueListResponse, Error>({
+    queryKey: ["repo-issues", repoId, state, page, lang],
+    queryFn: () => {
+      const params = new URLSearchParams({ state, page: String(page) });
+      if (lang) params.set("lang", lang);
+      return api<IssueListResponse>(`/repos/${repoId}/issues?${params.toString()}`);
+    },
+    enabled: Boolean(repoId),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useRepoIssueDetail(
+  repoId: number | string | undefined,
+  issueNumber: number | null,
+  lang?: string
+) {
+  return useQuery<IssueDetailResponse, Error>({
+    queryKey: ["repo-issue-detail", repoId, issueNumber, lang],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (lang) params.set("lang", lang);
+      const qs = params.toString();
+      return api<IssueDetailResponse>(
+        `/repos/${repoId}/issues/${issueNumber}${qs ? `?${qs}` : ""}`
+      );
+    },
+    enabled: Boolean(repoId && issueNumber),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useRepoPulls(
+  repoId: number | string | undefined,
+  state: string = "open",
+  page: number = 1,
+  lang?: string
+) {
+  return useQuery<IssueListResponse, Error>({
+    queryKey: ["repo-pulls", repoId, state, page, lang],
+    queryFn: () => {
+      const params = new URLSearchParams({ state, page: String(page) });
+      if (lang) params.set("lang", lang);
+      return api<IssueListResponse>(`/repos/${repoId}/pulls?${params.toString()}`);
+    },
+    enabled: Boolean(repoId),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useRepoPullDetail(
+  repoId: number | string | undefined,
+  pullNumber: number | null,
+  lang?: string
+) {
+  return useQuery<IssueDetailResponse, Error>({
+    queryKey: ["repo-pull-detail", repoId, pullNumber, lang],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (lang) params.set("lang", lang);
+      const qs = params.toString();
+      return api<IssueDetailResponse>(
+        `/repos/${repoId}/pulls/${pullNumber}${qs ? `?${qs}` : ""}`
+      );
+    },
+    enabled: Boolean(repoId && pullNumber),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
 

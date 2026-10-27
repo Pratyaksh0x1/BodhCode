@@ -51,11 +51,16 @@ def update_current_llm_run(
     model: str,
     prompt_name: str | None = None,
     prompt_version: int | None = None,
+    usage: Any = None,
     prompt_tokens: int = 0,
     completion_tokens: int = 0,
     total_tokens: int = 0,
 ) -> None:
     """Attach feature metadata, model info, and token usage to current LangSmith LLM span."""
+    if usage is not None:
+        prompt_tokens = getattr(usage, "prompt_tokens", prompt_tokens)
+        completion_tokens = getattr(usage, "completion_tokens", completion_tokens)
+        total_tokens = getattr(usage, "total_tokens", total_tokens)
     try:
         run_tree = get_current_run_tree()
         if run_tree is None:

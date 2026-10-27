@@ -148,3 +148,220 @@ class GitHubClient:
             if dest_path.exists():
                 dest_path.unlink(missing_ok=True)
             raise
+
+    async def get_readme(
+        self,
+        owner: str,
+        name: str,
+        ref: str | None = None,
+    ) -> dict[str, str]:
+        """Fetch repository README raw markdown content and file name."""
+        url = f"/repos/{owner}/{name}/readme"
+        params = {"ref": ref} if ref else {}
+        resp = await self.client.get(
+            url,
+            params=params,
+            headers={"Accept": "application/vnd.github.raw+json"},
+        )
+        self._handle_response_status(resp)
+
+        cd = resp.headers.get("content-disposition", "")
+        file_name = "README.md"
+        if "filename=" in cd:
+            file_name = cd.split("filename=")[-1].strip("\"' ")
+
+        # Support base64 JSON payload if returned instead of raw text
+        if resp.headers.get("content-type", "").startswith("application/json"):
+            try:
+                data = resp.json()
+                if (
+                    isinstance(data, dict)
+                    and "content" in data
+                    and data.get("encoding") == "base64"
+                ):
+                    import base64
+
+                    content = base64.b64decode(data["content"]).decode("utf-8", errors="replace")
+                    return {"file_name": data.get("name", file_name), "content": content}
+            except Exception:
+                pass
+
+        return {"file_name": file_name, "content": resp.text}
+
+    @staticmethod
+    def _sanitize_issue_or_pr(item: dict[str, Any]) -> dict[str, Any]:
+        """Extract only UI-needed fields for issues or pull requests."""
+        user = item.get("user") or {}
+        labels = [
+            {"name": lbl.get("name", ""), "color": lbl.get("color", "")}
+            for lbl in item.get("labels", [])
+            if isinstance(lbl, dict)
+        ]
+        return {
+            "number": item.get("number"),
+            "title": item.get("title", ""),
+            "body": item.get("body") or "",
+            "state": item.get("state", "open"),
+            "author": {
+                "login": user.get("login", "ghost"),
+                "avatar_url": user.get("avatar_url", ""),
+            },
+            "created_at": item.get("created_at"),
+            "updated_at": item.get("updated_at"),
+            "labels": labels,
+            "comment_count": item.get("comments", 0),
+            "html_url": item.get("html_url", ""),
+        }
+
+    @staticmethod
+    def _sanitize_comment(item: dict[str, Any]) -> dict[str, Any]:
+        """Extract only UI-needed fields for issue or PR comments."""
+        user = item.get("user") or {}
+        return {
+            "id": item.get("id"),
+            "body": item.get("body") or "",
+            "author": {
+                "login": user.get("login", "ghost"),
+                "avatar_url": user.get("avatar_url", ""),
+            },
+            "created_at": item.get("created_at"),
+            "updated_at": item.get("updated_at"),
+            "html_url": item.get("html_url", ""),
+        }
+
+    @staticmethod
+    def _extract_next_page(
+        link_header: str | None,
+        page: int,
+        item_count: int,
+        per_page: int,
+    ) -> int | None:
+        """Extract next page integer from GitHub Link header or pagination count."""
+        import re
+
+        if link_header:
+            match = re.search(r'page=(\d+)[^>]*>;\s*rel="next"', link_header)
+            if match:
+                return int(match.group(1))
+        if item_count >= per_page:
+            return page + 1
+        return None
+
+    async def list_issues(
+        self,
+        owner: str,
+        name: str,
+        state: str = "open",
+        page: int = 1,
+        per_page: int = 30,
+    ) -> dict[str, Any]:
+        """List repository issues, explicitly filtering out pull requests."""
+        url = f"/repos/{owner}/{name}/issues"
+        params = {"state": state, "page": page, "per_page": per_page}
+        resp = await self.client.get(url, params=params)
+        self._handle_response_status(resp)
+        data = resp.json()
+        if not isinstance(data, list):
+            data = []
+
+        # Filter out items carrying a 'pull_request' key
+        pure_issues = [it for it in data if "pull_request" not in it]
+        sanitized = [self._sanitize_issue_or_pr(it) for it in pure_issues]
+        next_page = self._extract_next_page(
+            resp.headers.get("link"),
+            page,
+            len(data),
+            per_page,
+        )
+
+        return {"items": sanitized, "next_page": next_page}
+
+    async def get_issue(self, owner: str, name: str, number: int) -> dict[str, Any]:
+        """Fetch details for a single issue."""
+        url = f"/repos/{owner}/{name}/issues/{number}"
+        data = await self._request("GET", url)
+        return self._sanitize_issue_or_pr(data)
+
+    async def list_issue_comments(
+        self,
+        owner: str,
+        name: str,
+        number: int,
+        page: int = 1,
+        per_page: int = 30,
+    ) -> dict[str, Any]:
+        """List comments for an issue (or PR conversation comments)."""
+        url = f"/repos/{owner}/{name}/issues/{number}/comments"
+        params = {"page": page, "per_page": per_page}
+        resp = await self.client.get(url, params=params)
+        self._handle_response_status(resp)
+        data = resp.json()
+        if not isinstance(data, list):
+            data = []
+
+        sanitized = [self._sanitize_comment(it) for it in data]
+        next_page = self._extract_next_page(
+            resp.headers.get("link"),
+            page,
+            len(data),
+            per_page,
+        )
+        return {"items": sanitized, "next_page": next_page}
+
+    async def list_pulls(
+        self,
+        owner: str,
+        name: str,
+        state: str = "open",
+        page: int = 1,
+        per_page: int = 30,
+    ) -> dict[str, Any]:
+        """List pull requests for a repository."""
+        url = f"/repos/{owner}/{name}/pulls"
+        params = {"state": state, "page": page, "per_page": per_page}
+        resp = await self.client.get(url, params=params)
+        self._handle_response_status(resp)
+        data = resp.json()
+        if not isinstance(data, list):
+            data = []
+
+        sanitized = [self._sanitize_issue_or_pr(it) for it in data]
+        next_page = self._extract_next_page(
+            resp.headers.get("link"),
+            page,
+            len(data),
+            per_page,
+        )
+        return {"items": sanitized, "next_page": next_page}
+
+    async def get_pull(self, owner: str, name: str, number: int) -> dict[str, Any]:
+        """Fetch details for a single pull request."""
+        url = f"/repos/{owner}/{name}/pulls/{number}"
+        data = await self._request("GET", url)
+        return self._sanitize_issue_or_pr(data)
+
+    async def list_pull_comments(
+        self,
+        owner: str,
+        name: str,
+        number: int,
+        page: int = 1,
+        per_page: int = 30,
+    ) -> dict[str, Any]:
+        """Fetch all comments for a PR by combining issue comments and review comments."""
+        # 1. Fetch conversation comments from issues endpoint
+        conv = await self.list_issue_comments(owner, name, number, page=page, per_page=per_page)
+        # 2. Fetch code review comments from pulls endpoint
+        url = f"/repos/{owner}/{name}/pulls/{number}/comments"
+        params = {"page": page, "per_page": per_page}
+        resp = await self.client.get(url, params=params)
+        self._handle_response_status(resp)
+        review_data = resp.json()
+        if not isinstance(review_data, list):
+            review_data = []
+        review_sanitized = [self._sanitize_comment(it) for it in review_data]
+
+        all_comments = conv["items"] + review_sanitized
+        all_comments.sort(key=lambda c: c.get("created_at") or "")
+        return {"items": all_comments, "next_page": conv.get("next_page")}
+

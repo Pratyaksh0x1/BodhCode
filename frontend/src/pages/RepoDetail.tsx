@@ -1,13 +1,18 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { useMe } from "../lib/auth";
 import { useAnalyzeRepo, useRepo, useRepoGraph } from "../lib/repos";
 import { RepoCanvas } from "../components/canvas/RepoCanvas";
+import { ReadmeTab } from "../components/content/ReadmeTab";
+import { IssuesTab } from "../components/content/IssuesTab";
+import { PullRequestsTab } from "../components/content/PullRequestsTab";
 
 export function RepoDetail() {
   const { id } = useParams<{ id: string }>();
   const { data: repo, isLoading, isError, error } = useRepo(id);
   const analyzeMutation = useAnalyzeRepo();
 
+  const { data: user } = useMe();
   const [activeTab, setActiveTab] = useState<"map" | "readme" | "issues" | "prs">("map");
 
   const isReady = repo?.status === "ready";
@@ -250,38 +255,41 @@ export function RepoDetail() {
 
             <button
               type="button"
-              disabled
-              title="Available in Phase 9"
-              className="px-4 py-2 font-medium text-neutral-400 dark:text-neutral-600 cursor-not-allowed flex items-center gap-1.5"
+              onClick={() => setActiveTab("readme")}
+              aria-selected={activeTab === "readme"}
+              className={`px-4 py-2 font-semibold border-b-2 flex items-center gap-2 transition-colors cursor-pointer ${
+                activeTab === "readme"
+                  ? "border-orange-500 text-orange-500 dark:text-orange-400"
+                  : "border-transparent text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
+              }`}
             >
               <span>README</span>
-              <span className="text-[9px] px-1 rounded bg-neutral-200 dark:bg-neutral-800 text-neutral-400 dark:text-neutral-500">
-                Soon
-              </span>
             </button>
 
             <button
               type="button"
-              disabled
-              title="Available in Phase 9"
-              className="px-4 py-2 font-medium text-neutral-400 dark:text-neutral-600 cursor-not-allowed flex items-center gap-1.5"
+              onClick={() => setActiveTab("issues")}
+              aria-selected={activeTab === "issues"}
+              className={`px-4 py-2 font-semibold border-b-2 flex items-center gap-2 transition-colors cursor-pointer ${
+                activeTab === "issues"
+                  ? "border-orange-500 text-orange-500 dark:text-orange-400"
+                  : "border-transparent text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
+              }`}
             >
               <span>Issues</span>
-              <span className="text-[9px] px-1 rounded bg-neutral-200 dark:bg-neutral-800 text-neutral-400 dark:text-neutral-500">
-                Soon
-              </span>
             </button>
 
             <button
               type="button"
-              disabled
-              title="Available in Phase 9"
-              className="px-4 py-2 font-medium text-neutral-400 dark:text-neutral-600 cursor-not-allowed flex items-center gap-1.5"
+              onClick={() => setActiveTab("prs")}
+              aria-selected={activeTab === "prs"}
+              className={`px-4 py-2 font-semibold border-b-2 flex items-center gap-2 transition-colors cursor-pointer ${
+                activeTab === "prs"
+                  ? "border-orange-500 text-orange-500 dark:text-orange-400"
+                  : "border-transparent text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
+              }`}
             >
               <span>Pull Requests</span>
-              <span className="text-[9px] px-1 rounded bg-neutral-200 dark:bg-neutral-800 text-neutral-400 dark:text-neutral-500">
-                Soon
-              </span>
             </button>
           </div>
 
@@ -297,6 +305,18 @@ export function RepoDetail() {
                 <RepoCanvas repoId={repo.id} graph={graph} />
               )}
             </div>
+          )}
+
+          {activeTab === "readme" && (
+            <ReadmeTab repoId={repo.id} preferredLanguage={user?.preferred_language} />
+          )}
+
+          {activeTab === "issues" && (
+            <IssuesTab repoId={repo.id} preferredLanguage={user?.preferred_language} />
+          )}
+
+          {activeTab === "prs" && (
+            <PullRequestsTab repoId={repo.id} preferredLanguage={user?.preferred_language} />
           )}
         </div>
       )}
