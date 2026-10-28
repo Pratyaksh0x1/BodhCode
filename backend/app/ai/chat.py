@@ -16,13 +16,14 @@ from pydantic import BaseModel, Field
 from app.ai.llm import LLMClient, LLMResult, get_llm_client
 from app.ai.prompts.chat import CHAT_PROMPT_VERSION, build_chat_system_message
 from app.ai.tools import ToolContext, ToolResult, build_read_tools_registry
+from app.ai.tracing import traced
 from app.ai.untrusted import truncate
 from app.ai.verify import extract_path_mentions, verify_mentions
 
 logger = logging.getLogger(__name__)
 
 # Maximum tool execution iterations per turn
-MAX_TOOL_STEPS = 8
+MAX_TOOL_STEPS = 12
 
 # Maximum turns and characters from history
 MAX_HISTORY_TURNS = 10
@@ -91,6 +92,7 @@ def prepare_conversation_history(
     return conversation
 
 
+@traced(name="chat.stream", run_type="chain")
 async def run_chat_stream(
     request: Request,
     conversation: list[dict[str, Any]],
@@ -216,17 +218,32 @@ async def run_chat_stream(
             if await request.is_disconnected():
                 return
 
-            final_result = await client.chat(
-                messages=conversation,
-                feature="chat.final",
-                temperature=0.2,
-                max_tokens=1024,
-                prompt_name="chat",
-                prompt_version=CHAT_PROMPT_VERSION,
+            conversation.append(
+                {
+                    "role": "user",
+                    "content": (
+                        "You have completed inspecting the codebase. "
+                        "Please synthesize and provide your direct final answer now "
+                        "based on the facts gathered above."
+                    ),
+                }
             )
-            accumulated_answer = final_result.text or ""
-            total_prompt_tokens += final_result.usage.prompt_tokens
-            total_completion_tokens += final_result.usage.completion_tokens
+            try:
+                final_result = await client.chat(
+                    messages=conversation,
+                    tools=tools_schemas,
+                    feature="chat.final",
+                    temperature=0.1,
+                    max_tokens=1024,
+                    prompt_name="chat",
+                    prompt_version=CHAT_PROMPT_VERSION,
+                )
+                accumulated_answer = final_result.text or ""
+                total_prompt_tokens += final_result.usage.prompt_tokens
+                total_completion_tokens += final_result.usage.completion_tokens
+            except Exception as exc:
+                logger.warning("Final answer synthesis fallback: %s", exc)
+                accumulated_answer = "Unable to determine further details within the tool execution limit."
 
         # Stream the final answer tokens
         # Split into small delta chunks for smooth client rendering

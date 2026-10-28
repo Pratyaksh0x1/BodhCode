@@ -1,0 +1,69 @@
+{
+  "nodes": [
+    "packages/core/src/calc.ts",
+    "packages/core/src/index.ts",
+    "packages/core/src/types.ts",
+    "packages/web/src/app.ts",
+    "packages/web/src/components/button.ts"
+  ],
+  "edges": [
+    {
+      "source": "packages/core/src/index.ts",
+      "target": "packages/core/src/calc.ts",
+      "kind": "reexport"
+    },
+    {
+      "source": "packages/core/src/index.ts",
+      "target": "packages/core/src/types.ts",
+      "kind": "reexport"
+    },
+    {
+      "source": "packages/web/src/app.ts",
+      "target": "packages/core/src/index.ts",
+      "kind": "import"
+    },
+    {
+      "source": "packages/web/src/app.ts",
+      "target": "packages/web/src/components/button.ts",
+      "kind": "import"
+    },
+    {
+      "source": "packages/web/src/components/button.ts",
+      "target": "packages/core/src/types.ts",
+      "kind": "import"
+    }
+  ],
+  "cycles": [],
+  "blast_radius": {
+    "packages/core/src/types.ts": [
+      {
+        "file": "packages/core/src/index.ts",
+        "depth": 1
+      },
+      {
+        "file": "packages/web/src/components/button.ts",
+        "depth": 1
+      },
+      {
+        "file": "packages/web/src/app.ts",
+        "depth": 2
+      }
+    ],
+    "packages/core/src/calc.ts": [
+      {
+        "file": "packages/core/src/index.ts",
+        "depth": 1
+      },
+      {
+        "file": "packages/web/src/app.ts",
+        "depth": 2
+      }
+    ],
+    "packages/web/src/components/button.ts": [
+      {
+        "file": "packages/web/src/app.ts",
+        "depth": 1
+      }
+    ]
+  }
+}

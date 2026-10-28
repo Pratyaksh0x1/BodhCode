@@ -14,7 +14,7 @@ from app.ai.prompts.translate import (
     build_batch_translate_messages,
     build_translate_messages,
 )
-from app.ai.tracing import update_current_llm_run
+from app.ai.tracing import traced, update_current_llm_run
 from app.i18n.mask import _PLACEHOLDER_RE, mask_protected, placeholders_intact, unmask
 from app.models.translation import TranslationCache
 from app.models.user import utc_now
@@ -97,6 +97,7 @@ def chunk_by_paragraphs(text: str, max_chars: int = MAX_CHUNK_CHARS) -> list[str
     return chunks
 
 
+@traced(name="translate.text", run_type="chain")
 async def translate_text(
     text: str,
     *,
@@ -258,6 +259,7 @@ async def translate_text(
     )
 
 
+@traced(name="translate.many", run_type="chain")
 async def translate_many(
     items: list[str],
     *,

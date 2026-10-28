@@ -12,6 +12,7 @@ from sqlmodel import Session, select
 
 from app.ai.llm import LLMClient, get_llm_client
 from app.ai.prompts.explain import PROMPT_VERSION, build_explain_messages
+from app.ai.tracing import traced
 from app.ai.verify import annotate, extract_path_mentions, verify_mentions
 from app.models.explain import ExplainCache
 from app.models.repo import Repo
@@ -102,6 +103,7 @@ def read_source_preview(source_dir: Path | None, file_path: str) -> str | None:
     return preview
 
 
+@traced(name="explain.file", run_type="chain")
 async def explain_file(
     repo: Repo,
     file_path: str,

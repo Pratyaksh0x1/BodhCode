@@ -268,11 +268,12 @@ def extract_file(path: str, source: bytes) -> FileFacts:
 
         # 2. Export statement (re-exports or declarations)
         elif node_type == "export_statement":
-            descend = False
             line = node.start_point.row + 1
             source_node = node.child_by_field_name("source")
             if not source_node:
                 source_node = next((c for c in node.children if c.type == "string"), None)
+            if source_node:
+                descend = False
 
             is_default = any(c.type == "default" for c in node.children)
             if is_default:

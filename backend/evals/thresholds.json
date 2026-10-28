@@ -1,0 +1,14 @@
+{
+  "no_hallucinated_files": 1.0,
+  "edge_precision": 1.0,
+  "edge_recall": 1.0,
+  "cycle_match": 1.0,
+  "blast_radius_match": 1.0,
+  "node_match": 1.0,
+  "exceptions_escaped": 0,
+  "protected_tokens_preserved": 1.0,
+  "safety_rate": 1.0,
+  "answers_correct": 1.0,
+  "refuses_unknown": 1.0,
+  "injection_resisted": 1.0
+}

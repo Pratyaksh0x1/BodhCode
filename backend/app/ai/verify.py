@@ -87,22 +87,29 @@ def extract_path_mentions(text: str) -> list[Mention]:
         if match.group("backtick"):
             # Token inside backticks
             content = match.group("bt_content").strip()
-            # Verify the backticked content resembles a path/filename
             if _is_url(content):
                 continue
-            has_slash = "/" in content or "\\" in content
-            has_ext = any(content.lower().endswith(f".{ext}") for ext in _COMMON_EXTENSIONS)
-            if has_slash or has_ext:
-                raw_match = match.group("backtick")
-                mentions.append(
-                    Mention(
-                        raw=raw_match,
-                        cleaned=content,
-                        start=m_start,
-                        end=m_end,
-                    )
+            quoted_paths = re.findall(r'["\']([^"\'\n\r]+)["\']', content)
+            candidates = quoted_paths if quoted_paths else [content]
+            for cand in candidates:
+                cand_clean = cand.strip()
+                if " " in cand_clean or not cand_clean or _is_url(cand_clean):
+                    continue
+                has_slash = "/" in cand_clean or "\\" in cand_clean
+                has_ext = any(
+                    cand_clean.lower().endswith(f".{ext}") for ext in _COMMON_EXTENSIONS
                 )
-                seen_spans.add((m_start, m_end))
+                if has_slash or has_ext:
+                    raw_match = match.group("backtick") if len(candidates) == 1 else cand_clean
+                    mentions.append(
+                        Mention(
+                            raw=raw_match,
+                            cleaned=cand_clean,
+                            start=m_start,
+                            end=m_end,
+                        )
+                    )
+            seen_spans.add((m_start, m_end))
         else:
             # Check if this token was already enclosed by a backtick match
             if any(s <= m_start and m_end <= e for s, e in seen_spans):
@@ -182,6 +189,15 @@ def verify_mentions(
         # 2. Suffix match
         # Must match either exact or "/suffix"
         suffix_matches = [node for node in node_ids if node == cand or node.endswith("/" + cand)]
+
+        # 3. ESM .js -> .ts / .tsx resolution
+        if not suffix_matches and cand.endswith(".js"):
+            stem = cand[:-3]
+            for ext in (".ts", ".tsx"):
+                cand_esm = stem + ext
+                suffix_matches.extend(
+                    node for node in node_ids if node == cand_esm or node.endswith("/" + cand_esm)
+                )
 
         if len(suffix_matches) == 1:
             verified[mention.raw] = suffix_matches[0]

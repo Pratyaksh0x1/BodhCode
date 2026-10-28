@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@repo/core": ["packages/core/src/index.ts"],
+      "@repo/core/*": ["packages/core/src/*"]
+    }
+  }
+}

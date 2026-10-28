@@ -597,7 +597,7 @@ class SearchCodeTool(Tool):
                 pass
         elif ctx.source_dir is not None and ctx.source_dir.exists():
             for p in sorted(ctx.source_dir.rglob("*")):
-                if p.is_file() and p.name != ".ingest_version":
+                if p.is_file() and p.name not in (".ingest_version", "truth.json"):
                     files_to_scan.append(p.relative_to(ctx.source_dir).as_posix())
         else:
             files_to_scan = sorted(list(ctx.graph.nodes))

@@ -257,9 +257,32 @@ class LLMClient:
                     if isinstance(exc, (BadRequestError, UnprocessableEntityError)) or (
                         status_code is not None and 400 <= status_code < 500
                     ):
+                        err_body = getattr(exc, "body", None)
+                        err_code = (
+                            err_body.get("error", {}).get("code")
+                            if isinstance(err_body, dict)
+                            else None
+                        )
+                        if err_code in ("output_parse_failed", "tool_use_failed"):
+                            transient_attempts += 1
+                            if transient_attempts <= max_transient_attempts:
+                                delay = 0.5 + random.uniform(0.0, 0.25)
+                                logger.warning(
+                                    "Groq tool parsing transient failure (%s) for feature '%s'. "
+                                    "Retrying in %.2fs (attempt %d/%d)",
+                                    err_code,
+                                    feature,
+                                    delay,
+                                    transient_attempts,
+                                    max_transient_attempts,
+                                )
+                                await self._sleep(delay)
+                                continue
+
+                        logger.error("Groq bad request error details: %s", exc)
                         raise LLMBadRequest(
                             "Invalid LLM request parameters or context exceeded"
-                        ) from None
+                        ) from exc
 
                     # 5xx handling (Transient)
                     if isinstance(exc, InternalServerError) or (
