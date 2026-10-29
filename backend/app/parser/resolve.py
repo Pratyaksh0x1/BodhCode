@@ -175,6 +175,9 @@ def resolve(
     if spec in NODE_BUILTINS:
         return Resolution(kind="builtin")
 
+    if not spec or not spec.strip():
+        return Resolution(kind="unresolved", reason="empty_specifier")
+
     # 2. Relative imports (./, ../, ., ..)
     if spec.startswith("./") or spec.startswith("../") or spec in (".", ".."):
         dir_name = posixpath.dirname(from_path)
@@ -188,12 +191,12 @@ def resolve(
 
         # Leaving repo root yields unresolved
         if joined.startswith("../") or joined == "..":
-            return Resolution(kind="unresolved")
+            return Resolution(kind="unresolved", reason="outside_repo")
 
         matched = _try_candidate(joined, all_files)
         if matched is not None:
             return Resolution(kind="file", target=matched)
-        return Resolution(kind="unresolved")
+        return Resolution(kind="unresolved", reason="file_not_found")
 
     # 3. Path alias matching from tsconfig.paths
     if tsconfig and tsconfig.paths:
@@ -218,6 +221,10 @@ def resolve(
                 if matched is not None:
                     return Resolution(kind="file", target=matched)
 
+        # If an explicit path alias matched but candidate was not found on disk
+        if matching_patterns:
+            return Resolution(kind="unresolved", reason="file_not_found")
+
     # 3b. baseUrl-relative bare specifiers
     if tsconfig and tsconfig.base_url is not None:
         candidate = (
@@ -235,7 +242,7 @@ def resolve(
         matched = _try_candidate(candidate, all_files)
         if matched is not None:
             return Resolution(kind="file", target=matched)
-        return Resolution(kind="unresolved")
+        return Resolution(kind="unresolved", reason="file_not_found")
 
     # 4. Anything else bare -> external with normalized package
     pkg = _normalize_package_name(spec)

@@ -40,11 +40,11 @@ def test_resolve_relative_and_esm_mapping() -> None:
 
     # Missing relative file -> unresolved (never external)
     res5 = resolve("src/main.ts", "./missing.js", all_files, None)
-    assert res5 == Resolution(kind="unresolved")
+    assert res5 == Resolution(kind="unresolved", reason="file_not_found")
 
     # Escaping repo root -> unresolved
     res6 = resolve("src/main.ts", "../../outside.ts", all_files, None)
-    assert res6 == Resolution(kind="unresolved")
+    assert res6 == Resolution(kind="unresolved", reason="outside_repo")
 
 
 def test_resolve_directory_index() -> None:

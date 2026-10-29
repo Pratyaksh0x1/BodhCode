@@ -1,6 +1,7 @@
 """Pure AST fact extraction for TypeScript and JavaScript source files."""
 
 import codecs
+import hashlib
 
 import tree_sitter_javascript as ts_js
 import tree_sitter_typescript as ts_ts
@@ -173,8 +174,76 @@ def _extract_export_names(node: Node, source: bytes) -> list[str]:
     return names
 
 
+def _extract_commonjs_exports(node: Node, source: bytes) -> tuple[list[str], bool]:
+    """Extract CommonJS exported symbols and default export status from an assignment expression."""
+    names: list[str] = []
+    has_default = False
+
+    left = node.child_by_field_name("left")
+    right = node.child_by_field_name("right")
+    if not left:
+        return names, has_default
+
+    left_text = _node_text(left, source).strip()
+
+    # Case 1: exports.foo = ...
+    if left_text.startswith("exports.") and len(left_text) > 8:
+        prop = left_text[8:].strip()
+        if prop and prop.isidentifier():
+            names.append(prop)
+
+    # Case 2: module.exports.bar = ...
+    elif left_text.startswith("module.exports.") and len(left_text) > 15:
+        prop = left_text[15:].strip()
+        if prop and prop.isidentifier():
+            names.append(prop)
+
+    # Case 3: module.exports = ...
+    elif left_text == "module.exports":
+        has_default = True
+        if right:
+            if right.type == "object":
+                for child in right.children:
+                    if child.type == "pair":
+                        key_node = child.child_by_field_name("key")
+                        if key_node:
+                            raw_key = _node_text(key_node, source).strip()
+                            if (raw_key.startswith('"') and raw_key.endswith('"')) or (
+                                raw_key.startswith("'") and raw_key.endswith("'")
+                            ):
+                                raw_key = raw_key[1:-1]
+                            if raw_key and raw_key != "default":
+                                names.append(raw_key)
+                    elif child.type == "shorthand_property_identifier":
+                        prop_name = _node_text(child, source).strip()
+                        if prop_name and prop_name != "default":
+                            names.append(prop_name)
+                    elif child.type == "method_definition":
+                        name_node = child.child_by_field_name("name")
+                        if name_node:
+                            method_name = _node_text(name_node, source).strip()
+                            if method_name and method_name != "default":
+                                names.append(method_name)
+            elif right.type in ("function_expression", "function", "class", "class_expression"):
+                name_node = right.child_by_field_name("name")
+                if not name_node:
+                    for c in right.children:
+                        if c.type in ("identifier", "type_identifier"):
+                            name_node = c
+                            break
+                if name_node:
+                    fn_name = _node_text(name_node, source).strip()
+                    if fn_name and fn_name != "default":
+                        names.append(fn_name)
+
+    return names, has_default
+
+
 def extract_file(path: str, source: bytes) -> FileFacts:
     """Extract imports, exports, and call facts from TS/JS source code."""
+    loc = len(source.splitlines()) if source else 0
+    content_hash = hashlib.sha256(source).hexdigest() if source else ""
+
     # Route by extension
     path_lower = path.lower()
     if path_lower.endswith(".tsx"):
@@ -191,6 +260,8 @@ def extract_file(path: str, source: bytes) -> FileFacts:
             has_default_export=False,
             unresolved_dynamic=0,
             flags=("skipped_unsupported",),
+            loc=0,
+            content_hash=content_hash,
         )
 
     # Enforce size ceiling for supported source files
@@ -202,6 +273,8 @@ def extract_file(path: str, source: bytes) -> FileFacts:
             has_default_export=False,
             unresolved_dynamic=0,
             flags=("skipped_large",),
+            loc=loc,
+            content_hash=content_hash,
         )
 
     parser = _get_parser(lang_key)
@@ -366,6 +439,14 @@ def extract_file(path: str, source: bytes) -> FileFacts:
                     else:
                         unresolved_dynamic += 1
 
+        # 4. CommonJS exports: module.exports = ..., module.exports.x = ..., exports.x = ...
+        elif node_type == "assignment_expression":
+            cjs_names, cjs_default = _extract_commonjs_exports(node, source)
+            if cjs_names:
+                exports_list.extend(cjs_names)
+            if cjs_default:
+                has_default_export = True
+
         if descend and node.children:
             stack.extend(reversed(node.children))
 
@@ -380,4 +461,6 @@ def extract_file(path: str, source: bytes) -> FileFacts:
         has_default_export=has_default_export,
         unresolved_dynamic=unresolved_dynamic,
         flags=tuple(sorted(flags_list)),
+        loc=loc,
+        content_hash=content_hash,
     )

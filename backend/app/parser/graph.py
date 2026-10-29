@@ -7,7 +7,7 @@ from typing import Any, Final
 
 from app.parser.types import AnalyzedFile
 
-PARSER_VERSION: Final[int] = 1
+PARSER_VERSION: Final[int] = 2
 MAX_GRAPH_NODES: Final[int] = 5000
 MAX_GRAPH_EDGES: Final[int] = 20000
 
@@ -39,6 +39,9 @@ class NodeDoc:
     unresolved_count: int
     unresolved_dynamic: int
     flags: list[str]
+    loc: int = 0
+    content_hash: str = ""
+    role: str | None = None
 
 
 @dataclass(frozen=True)
@@ -83,6 +86,22 @@ class GraphDoc:
     edges: list[EdgeDoc]
     folders: list[FolderDoc]
     stats: StatsDoc
+    coverage: dict[str, Any] = None  # type: ignore[assignment]
+    framework: str | None = None
+    routes: list[dict[str, Any]] = None  # type: ignore[assignment]
+    insights: list[dict[str, Any]] = None  # type: ignore[assignment]
+
+    def __post_init__(self) -> None:
+        if self.coverage is None:
+            object.__setattr__(
+                self,
+                "coverage",
+                {"percent": None, "internal_resolved": 0, "unresolved": 0},
+            )
+        if self.routes is None:
+            object.__setattr__(self, "routes", [])
+        if self.insights is None:
+            object.__setattr__(self, "insights", [])
 
     def to_dict(self) -> dict[str, Any]:
         """Convert GraphDoc to deterministic dictionary matching JSON schema."""
@@ -97,6 +116,10 @@ class GraphDoc:
             "edges": [asdict(e) for e in self.edges],
             "folders": [asdict(f) for f in self.folders],
             "stats": asdict(self.stats),
+            "coverage": dict(self.coverage),
+            "framework": self.framework,
+            "routes": list(self.routes),
+            "insights": list(self.insights),
         }
 
     def to_json(self, indent: int | None = 2) -> str:
@@ -125,6 +148,9 @@ class GraphDoc:
                     unresolved_count=int(n["unresolved_count"]),
                     unresolved_dynamic=int(n["unresolved_dynamic"]),
                     flags=list(n["flags"]),
+                    loc=int(n.get("loc", 0)),
+                    content_hash=str(n.get("content_hash", "")),
+                    role=n.get("role"),
                 )
                 for n in data["nodes"]
             ],
@@ -154,6 +180,12 @@ class GraphDoc:
                 cycles=int(data["stats"]["cycles"]),
                 unresolved=int(data["stats"]["unresolved"]),
             ),
+            coverage=dict(
+                data.get("coverage", {"percent": None, "internal_resolved": 0, "unresolved": 0})
+            ),
+            framework=data.get("framework"),
+            routes=list(data.get("routes", [])),
+            insights=list(data.get("insights", [])),
         )
 
     @classmethod
@@ -212,6 +244,9 @@ def build_graph(facts: list[AnalyzedFile], repo_meta: RepoMeta) -> GraphDoc:
                 unresolved_count=unresolved_count,
                 unresolved_dynamic=af.facts.unresolved_dynamic,
                 flags=sorted(list(af.facts.flags)),
+                loc=af.loc or af.facts.loc,
+                content_hash=af.content_hash or af.facts.content_hash,
+                role=None,
             )
         )
 
@@ -277,9 +312,19 @@ def build_graph(facts: list[AnalyzedFile], repo_meta: RepoMeta) -> GraphDoc:
             )
         )
 
-    # 5. Build stats (including cycles)
+    # 5. Build stats and coverage (including cycles)
     all_external_packages = len({pkg for n in nodes for pkg in n.external_deps})
     total_unresolved = sum(n.unresolved_count for n in nodes)
+    internal_resolved = sum(
+        1 for af in facts for imp in af.resolved_imports if imp.resolution.kind == "file"
+    )
+    denom = internal_resolved + total_unresolved
+    coverage_percent = round((internal_resolved / denom) * 100.0, 2) if denom > 0 else None
+    coverage = {
+        "percent": coverage_percent,
+        "internal_resolved": internal_resolved,
+        "unresolved": total_unresolved,
+    }
 
     # Construct temporary doc to compute cycles via blast
     doc_for_cycles = GraphDoc(
@@ -299,6 +344,10 @@ def build_graph(facts: list[AnalyzedFile], repo_meta: RepoMeta) -> GraphDoc:
             cycles=0,
             unresolved=total_unresolved,
         ),
+        coverage=coverage,
+        framework=None,
+        routes=[],
+        insights=[],
     )
 
     g = to_digraph(doc_for_cycles, include_type_only=True)
@@ -323,4 +372,8 @@ def build_graph(facts: list[AnalyzedFile], repo_meta: RepoMeta) -> GraphDoc:
         edges=edges,
         folders=folders,
         stats=stats,
+        coverage=coverage,
+        framework=None,
+        routes=[],
+        insights=[],
     )

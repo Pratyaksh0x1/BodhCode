@@ -10,6 +10,7 @@ from app.parser.analyze import analyze_repo_files
 from app.parser.blast import blast_radius, to_digraph
 from app.parser.graph import (
     MAX_GRAPH_NODES,
+    PARSER_VERSION,
     GraphDoc,
     GraphTooLargeError,
     RepoMeta,
@@ -131,7 +132,7 @@ def test_basic_imports_golden_schema() -> None:
     doc = build_graph(analyzed, meta)
     data = doc.to_dict()
 
-    assert data["version"] == 1
+    assert data["version"] == PARSER_VERSION
     assert data["repo"] == {"owner": "test", "name": "basic", "commit_sha": "basic123"}
     assert data["stats"]["files"] == 3
     assert data["stats"]["edges"] == 3

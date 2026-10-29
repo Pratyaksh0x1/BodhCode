@@ -77,6 +77,69 @@ def to_digraph(doc: "GraphDoc", include_type_only: bool = True) -> nx.DiGraph:
     return g
 
 
+def walk(
+    g: nx.DiGraph,
+    file: str,
+    direction: str = "upstream",
+    depth: int | None = 2,
+    *,
+    include_type_only: bool = True,
+) -> list[Impact]:
+    """Single BFS walk over dependency graph in specified direction.
+
+    - direction in ('upstream', 'importers', 'reverse', 'blast_radius'):
+      Traverses backwards (predecessors) to find files importing `file`.
+    - direction in ('downstream', 'dependencies', 'forward', 'imports'):
+      Traverses forwards (successors) to find files imported by `file`.
+    - depth: maximum traversal depth. If None, traversal is unlimited. Default is 2.
+
+    Raises NodeNotFound if file is not in g.
+    Returns list of Impact sorted by (depth, file). Target file itself is not included.
+    """
+    if file not in g:
+        raise NodeNotFound(f"Node '{file}' not found in graph")
+
+    if depth is not None and depth <= 0:
+        return []
+
+    is_upstream = direction.lower() in ("upstream", "importers", "reverse", "blast_radius")
+
+    visited: set[str] = {file}
+    queue: deque[tuple[str, int]] = deque([(file, 0)])
+    impacts: list[Impact] = []
+
+    while queue:
+        curr, curr_depth = queue.popleft()
+        if depth is not None and curr_depth >= depth:
+            continue
+
+        neighbors: list[str] = []
+        if is_upstream:
+            for pred in g.predecessors(curr):
+                edge_data: dict[str, Any] = g[pred][curr]
+                if not include_type_only and edge_data.get("type_only", False):
+                    continue
+                neighbors.append(pred)
+        else:
+            for succ in g.successors(curr):
+                edge_data = g[curr][succ]
+                if not include_type_only and edge_data.get("type_only", False):
+                    continue
+                neighbors.append(succ)
+
+        neighbors.sort()
+
+        for neighbor in neighbors:
+            if neighbor not in visited:
+                visited.add(neighbor)
+                next_depth = curr_depth + 1
+                impacts.append(Impact(file=neighbor, depth=next_depth, via=curr))
+                queue.append((neighbor, next_depth))
+
+    impacts.sort(key=lambda x: (x["depth"], x["file"]))
+    return impacts
+
+
 def blast_radius(
     g: nx.DiGraph,
     file: str,
@@ -86,91 +149,35 @@ def blast_radius(
 ) -> list[Impact]:
     """Calculate all files transitively importing the target file.
 
-    Traverses reversed edges using breadth-first search (BFS).
-    Returns list of Impact sorted by (depth, file). The changed file itself is not included.
-    Raises NodeNotFound if file is not in g.
+    Thin wrapper around walk(g, file, direction='upstream', depth=max_depth).
     """
-    if file not in g:
-        raise NodeNotFound(f"Node '{file}' not found in graph")
-
-    if max_depth is not None and max_depth <= 0:
-        return []
-
-    visited: set[str] = {file}
-    queue: deque[tuple[str, int]] = deque([(file, 0)])
-    impacts: list[Impact] = []
-
-    while queue:
-        curr, depth = queue.popleft()
-        if max_depth is not None and depth >= max_depth:
-            continue
-
-        importers: list[str] = []
-        for pred in g.predecessors(curr):
-            edge_data: dict[str, Any] = g[pred][curr]
-            if not include_type_only and edge_data.get("type_only", False):
-                continue
-            importers.append(pred)
-
-        # Sort for deterministic BFS exploration order
-        importers.sort()
-
-        for importer in importers:
-            if importer not in visited:
-                visited.add(importer)
-                next_depth = depth + 1
-                impacts.append(Impact(file=importer, depth=next_depth, via=curr))
-                queue.append((importer, next_depth))
-
-    impacts.sort(key=lambda x: (x["depth"], x["file"]))
-    return impacts
+    return walk(
+        g,
+        file,
+        direction="upstream",
+        depth=max_depth,
+        include_type_only=include_type_only,
+    )
 
 
 def dependencies(
     g: nx.DiGraph,
     file: str,
     *,
-    depth: int = 1,
+    depth: int | None = 2,
     include_type_only: bool = True,
 ) -> list[Impact]:
     """Calculate files imported by target file up to given depth (forward BFS).
 
-    Returns list of Impact sorted by (depth, file). Target file is not included.
-    Raises NodeNotFound if file is not in g.
+    Thin wrapper around walk(g, file, direction='downstream', depth=depth).
     """
-    if file not in g:
-        raise NodeNotFound(f"Node '{file}' not found in graph")
-
-    if depth <= 0:
-        return []
-
-    visited: set[str] = {file}
-    queue: deque[tuple[str, int]] = deque([(file, 0)])
-    impacts: list[Impact] = []
-
-    while queue:
-        curr, d = queue.popleft()
-        if d >= depth:
-            continue
-
-        imported_files: list[str] = []
-        for succ in g.successors(curr):
-            edge_data: dict[str, Any] = g[curr][succ]
-            if not include_type_only and edge_data.get("type_only", False):
-                continue
-            imported_files.append(succ)
-
-        imported_files.sort()
-
-        for dep in imported_files:
-            if dep not in visited:
-                visited.add(dep)
-                next_depth = d + 1
-                impacts.append(Impact(file=dep, depth=next_depth, via=curr))
-                queue.append((dep, next_depth))
-
-    impacts.sort(key=lambda x: (x["depth"], x["file"]))
-    return impacts
+    return walk(
+        g,
+        file,
+        direction="downstream",
+        depth=depth,
+        include_type_only=include_type_only,
+    )
 
 
 def dependents(g: nx.DiGraph, file: str) -> list[str]:

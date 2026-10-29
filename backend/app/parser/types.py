@@ -27,6 +27,8 @@ class FileFacts:
     has_default_export: bool
     unresolved_dynamic: int
     flags: tuple[str, ...]
+    loc: int = 0
+    content_hash: str = ""
 
 
 @dataclass(frozen=True)
@@ -36,6 +38,7 @@ class Resolution:
     kind: ResolutionKind
     target: str | None = None
     package: str | None = None
+    reason: str | None = None
 
 
 @dataclass(frozen=True)
@@ -54,3 +57,5 @@ class AnalyzedFile:
     facts: FileFacts
     resolved_imports: tuple[ResolvedImport, ...]
     size: int = 0
+    loc: int = 0
+    content_hash: str = ""

@@ -28,6 +28,7 @@ Interactive documentation available at [http://localhost:8000/docs](http://local
 
 ### 2. Frontend
 
+
 Navigate to `frontend`, configure environment, install dependencies, and launch Vite dev server:
 
 ```bash

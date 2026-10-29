@@ -10,6 +10,7 @@ from app.parser.blast import (
     dependents,
     find_cycles,
     to_digraph,
+    walk,
 )
 from app.parser.extract import extract_file
 from app.parser.graph import (
@@ -67,4 +68,5 @@ __all__ = [
     "parse_jsonc",
     "resolve",
     "to_digraph",
+    "walk",
 ]

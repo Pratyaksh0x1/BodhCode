@@ -14,7 +14,7 @@ from app.main import app
 from app.models.graph import RepoGraph
 from app.models.repo import Repo
 from app.models.user import User
-from app.parser.graph import GraphDoc, NodeDoc, StatsDoc
+from app.parser.graph import PARSER_VERSION, GraphDoc, NodeDoc, StatsDoc
 
 
 @pytest.fixture(name="test_user")
@@ -109,7 +109,7 @@ def test_repo_env_fixture(
     graph = RepoGraph(
         repo_id=repo.id,
         commit_sha=repo.commit_sha,
-        parser_version=1,
+        parser_version=PARSER_VERSION,
         graph_json=doc.to_json(),
         node_count=1,
         edge_count=0,
