@@ -292,3 +292,61 @@ def test_user_settings_isolation(client: TestClient, db_session: Session):
 
     finally:
         client.app.dependency_overrides.pop(get_current_user, None)
+
+
+def test_grok_settings_update_and_encryption(client: TestClient, db_session: Session):
+    """Verify Grok API key encryption, model configuration, and safe public exposure."""
+    user = upsert_github_user(
+        db_session,
+        github_id=30001,
+        login="user-grok",
+        name="User Grok",
+        avatar_url="https://avatar.url/grok.png",
+        email="grok@example.com",
+        access_token="gho_token_grok",
+        token_scopes="read:user",
+    )
+
+    from app.auth.crypto import get_grok_key
+    from app.auth.deps import get_current_user
+
+    client.app.dependency_overrides[get_current_user] = lambda: db_session.get(User, user.id)
+    headers = {"X-Requested-With": "bodhcode"}
+
+    try:
+        # Check initial state
+        me_resp = client.get("/auth/me")
+        assert me_resp.status_code == 200
+        assert me_resp.json()["grok_configured"] is False
+        assert me_resp.json()["grok_model"] == "gpt-oss-120b"
+        assert "encrypted_grok_key" not in me_resp.json()
+
+        # Update grok key and model
+        resp = client.patch(
+            "/auth/me/settings",
+            json={"grok_api_key": "xai-secret-key-12345", "grok_model": "grok-2"},
+            headers=headers,
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["grok_configured"] is True
+        assert data["grok_model"] == "grok-2"
+        assert "xai-secret-key-12345" not in str(data)
+
+        # Verify DB is encrypted
+        db_user = db_session.get(User, user.id)
+        assert db_user.encrypted_grok_key is not None
+        assert db_user.encrypted_grok_key != "xai-secret-key-12345"
+        assert get_grok_key(db_user) == "xai-secret-key-12345"
+        assert db_user.grok_model == "grok-2"
+
+        # Verify invalid grok model is rejected
+        bad_resp = client.patch(
+            "/auth/me/settings",
+            json={"grok_model": "invalid-model-name"},
+            headers=headers,
+        )
+        assert bad_resp.status_code == 422
+
+    finally:
+        client.app.dependency_overrides.pop(get_current_user, None)

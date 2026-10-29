@@ -32,6 +32,7 @@ from app.routes.proposals import router as proposals_router
 from app.routes.push import router as push_router
 from app.routes.repos import router as repos_router
 from app.routes.settings import router as settings_router
+from app.routes.workspace import router as workspace_router
 
 
 @asynccontextmanager
@@ -127,6 +128,7 @@ def create_app() -> FastAPI:
     app.include_router(push_router)
     app.include_router(issues_router)
     app.include_router(activity_router)
+    app.include_router(workspace_router)
 
     if settings.ENV == "development":
         from app.routes.dev import router as dev_router

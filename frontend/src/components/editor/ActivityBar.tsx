@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 
-export type SidebarView = "explorer" | "changes" | "search";
+export type SidebarView = "explorer" | "changes" | "search" | "browser" | "multilingual";
 
 interface ActivityBarProps {
   activeView: SidebarView | null;
@@ -86,6 +86,50 @@ export function ActivityBar({
               strokeLinejoin="round"
               strokeWidth={1.75}
               d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
+          </svg>
+        </button>
+
+        {/* Embedded Browser icon */}
+        <button
+          type="button"
+          onClick={() => onSelectView("browser")}
+          title="Embedded Local Browser"
+          aria-label="Embedded Local Browser"
+          className={`relative w-10 h-10 rounded flex items-center justify-center transition-colors cursor-pointer ${
+            activeView === "browser"
+              ? "text-orange-400 bg-neutral-800/80 border-l-2 border-orange-500 rounded-l-none"
+              : "text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/40"
+          }`}
+        >
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={1.75}
+              d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
+            />
+          </svg>
+        </button>
+
+        {/* Multilingual Repo Reader icon */}
+        <button
+          type="button"
+          onClick={() => onSelectView("multilingual")}
+          title="Multilingual Repo Reader"
+          aria-label="Multilingual Repo Reader"
+          className={`relative w-10 h-10 rounded flex items-center justify-center transition-colors cursor-pointer ${
+            activeView === "multilingual"
+              ? "text-orange-400 bg-neutral-800/80 border-l-2 border-orange-500 rounded-l-none"
+              : "text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/40"
+          }`}
+        >
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={1.75}
+              d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"
             />
           </svg>
         </button>

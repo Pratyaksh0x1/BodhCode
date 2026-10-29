@@ -23,8 +23,10 @@ import { ActivityBar, type SidebarView } from "../components/editor/ActivityBar"
 import { AgentPanel, type PendingSelection } from "../components/editor/agent/AgentPanel";
 import { BottomPanel } from "../components/editor/BottomPanel";
 import { EditorTabs } from "../components/editor/EditorTabs";
+import { EmbeddedBrowser } from "../components/editor/EmbeddedBrowser";
 import { FileExplorer } from "../components/editor/FileExplorer";
 import { MonacoEditorPane } from "../components/editor/MonacoEditorPane";
+import { MultilingualViewer } from "../components/editor/MultilingualViewer";
 import { QuickOpenModal } from "../components/editor/QuickOpenModal";
 import { StatusBar } from "../components/editor/StatusBar";
 import { PushModalWizard } from "../components/editor/push/PushModalWizard";
@@ -421,19 +423,35 @@ export function EditorWorkspace() {
             {/* Left Sidebar Panel */}
             {sidebarView && (
               <>
-                <Panel id="sidebar" defaultSize={22} minSize={14} maxSize={40}>
-                  <FileExplorer
-                    files={files}
-                    activeFilePath={tabState.activePath}
-                    onOpenFile={handleOpenFile}
-                    onCreateFile={handleCreateFile}
-                    onRenameFile={handleRenameFile}
-                    onDeleteFile={handleDeleteFile}
-                    onRevertFile={handleRevertFile}
-                    repoId={repo.id}
-                    sidebarView={sidebarView}
-                    onOpenDiff={handleOpenDiff}
-                  />
+                <Panel
+                  id="sidebar"
+                  defaultSize={sidebarView === "browser" ? 40 : 22}
+                  minSize={14}
+                  maxSize={60}
+                >
+                  {sidebarView === "browser" ? (
+                    <EmbeddedBrowser
+                      onClose={() => setSidebarView(null)}
+                    />
+                  ) : sidebarView === "multilingual" ? (
+                    <MultilingualViewer
+                      repoId={repo.id}
+                      onClose={() => setSidebarView(null)}
+                    />
+                  ) : (
+                    <FileExplorer
+                      files={files}
+                      activeFilePath={tabState.activePath}
+                      onOpenFile={handleOpenFile}
+                      onCreateFile={handleCreateFile}
+                      onRenameFile={handleRenameFile}
+                      onDeleteFile={handleDeleteFile}
+                      onRevertFile={handleRevertFile}
+                      repoId={repo.id}
+                      sidebarView={sidebarView}
+                      onOpenDiff={handleOpenDiff}
+                    />
+                  )}
                 </Panel>
                 <Separator className="w-1 bg-neutral-800 hover:bg-orange-500 transition-colors cursor-col-resize shrink-0" />
               </>

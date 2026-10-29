@@ -15,6 +15,8 @@ export interface User {
   theme: "system" | "light" | "dark" | string;
   editor_theme: "auto" | "vs" | "vs-dark" | "hc-black" | "hc-light" | string;
   review_mode?: ReviewMode;
+  grok_configured?: boolean;
+  grok_model?: string;
 }
 
 export const AUTH_QUERY_KEY = ["auth", "me"] as const;

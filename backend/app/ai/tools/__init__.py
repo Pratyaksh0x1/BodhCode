@@ -1,6 +1,11 @@
 """AI tool registry, base definitions, and standard tool factories."""
 
 from app.ai.tools.base import Tool, ToolContext, ToolResult
+from app.ai.tools.browser_tools import (
+    BrowserActionTool,
+    BrowserOpenTool,
+    BrowserScreenshotTool,
+)
 from app.ai.tools.read_tools import (
     BlastRadiusTool,
     FindFilesTool,
@@ -32,6 +37,9 @@ def build_read_tools_registry() -> ToolRegistry:
     reg.register(SearchCodeTool())
     reg.register(TranslateTextTool())
     reg.register(UseSkillTool())
+    reg.register(BrowserOpenTool())
+    reg.register(BrowserScreenshotTool())
+    reg.register(BrowserActionTool())
     # Backwards compatibility with Phase 10 schemas
     reg.register(FindFilesTool())
     reg.register(GetFileExportsTool())
@@ -49,6 +57,9 @@ def build_agent_tools_registry() -> ToolRegistry:
 
 __all__ = [
     "BlastRadiusTool",
+    "BrowserActionTool",
+    "BrowserOpenTool",
+    "BrowserScreenshotTool",
     "CreateFileTool",
     "DeleteFileTool",
     "EditFileTool",

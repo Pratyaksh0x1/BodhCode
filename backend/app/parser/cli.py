@@ -13,14 +13,22 @@ from app.parser.graph import RepoMeta, build_graph
 IGNORED_DIRS = frozenset(
     {
         ".git",
+        ".github",
+        ".agents",
+        ".gemini",
         "node_modules",
+        "vscode-main",
+        "codex-main",
         "dist",
         "build",
         ".next",
         ".turbo",
         ".venv",
+        "venv",
+        "target",
         "__pycache__",
         ".pytest_cache",
+        ".ruff_cache",
     }
 )
 

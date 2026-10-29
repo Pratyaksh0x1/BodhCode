@@ -1,0 +1,104 @@
+{
+  "name": "bodhcode",
+  "displayName": "BodhCode Studio",
+  "description": "Interactive AST dependency mapping, multilingual translation, embedded local browser & Grok 120B AI assistant",
+  "version": "1.0.0",
+  "publisher": "bodhcode",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "main": "./out/extension.js",
+  "categories": [
+    "Programming Languages",
+    "AI",
+    "Visualization",
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "bodhcode-studio",
+          "title": "BodhCode",
+          "icon": "$(type-hierarchy)"
+        }
+      ]
+    },
+    "views": {
+      "bodhcode-studio": [
+        {
+          "id": "bodhcode.explorer",
+          "name": "BodhCode Explorer",
+          "type": "webview"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "bodhcode.openWorkspaceGraph",
+        "title": "BodhCode: Open Workspace Dependency Graph",
+        "category": "BodhCode"
+      },
+      {
+        "command": "bodhcode.openBrowser",
+        "title": "BodhCode: Open Embedded Local Browser",
+        "category": "BodhCode"
+      },
+      {
+        "command": "bodhcode.openMultilingual",
+        "title": "BodhCode: Open Multilingual Repo Reader",
+        "category": "BodhCode"
+      },
+      {
+        "command": "bodhcode.pingGrounded",
+        "title": "BodhCode: Ping Grounded AST Question",
+        "category": "BodhCode"
+      }
+    ],
+    "configuration": {
+      "title": "BodhCode Studio",
+      "properties": {
+        "bodhcode.backendUrl": {
+          "type": "string",
+          "default": "http://localhost:8000",
+          "description": "Local BodhCode Python/Tree-Sitter daemon URL."
+        },
+        "bodhcode.preferredLanguage": {
+          "type": "string",
+          "default": "en",
+          "description": "Preferred language for native translation."
+        },
+        "bodhcode.models.selectedModel": {
+          "type": "string",
+          "default": "gpt-oss-120b",
+          "enum": [
+            "gpt-oss-120b",
+            "grok-2",
+            "grok-beta",
+            "grok-vision-beta"
+          ],
+          "description": "Selected model on Grok / xAI."
+        },
+        "bodhcode.models.grokApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Custom xAI Grok API key (optional)."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.80.0",
+    "typescript": "^5.0.0"
+  }
+}

@@ -261,12 +261,24 @@ async def github_upgrade_callback(
 
 
 @router.get("/me", response_model=UserPublic)
-def get_me(current_user: Annotated[User, Depends(get_current_user)]) -> User:
+def get_me(current_user: Annotated[User, Depends(get_current_user)]) -> UserPublic:
     """Return profile details for the currently signed-in user.
 
     Never exposes encrypted token or internal scopes.
     """
-    return current_user
+    return UserPublic(
+        id=current_user.id,
+        login=current_user.login,
+        name=current_user.name,
+        avatar_url=current_user.avatar_url,
+        email=current_user.email,
+        preferred_language=current_user.preferred_language,
+        theme=current_user.theme,
+        editor_theme=current_user.editor_theme,
+        review_mode=current_user.review_mode,
+        grok_configured=bool(current_user.encrypted_grok_key),
+        grok_model=current_user.grok_model or "gpt-oss-120b",
+    )
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)

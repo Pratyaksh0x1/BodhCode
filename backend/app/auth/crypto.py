@@ -33,3 +33,10 @@ def get_github_token(user: "User") -> str:
     Nothing else touches encrypted_github_token directly for reading.
     """
     return decrypt_token(user.encrypted_github_token)
+
+
+def get_grok_key(user: "User") -> str | None:
+    """Decrypt user's Grok API key on demand, if configured."""
+    if not user.encrypted_grok_key:
+        return None
+    return decrypt_token(user.encrypted_grok_key)

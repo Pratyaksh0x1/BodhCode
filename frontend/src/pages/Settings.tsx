@@ -52,6 +52,25 @@ export function Settings() {
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
   const langDropdownRef = useRef<HTMLDivElement>(null);
 
+  // Grok API Key & Model Configuration
+  const [grokApiKeyInput, setGrokApiKeyInput] = useState("");
+  const [showGrokKey, setShowGrokKey] = useState(false);
+  const [customGrokModel, setCustomGrokModel] = useState<string | null>(null);
+  const selectedGrokModel = customGrokModel ?? user?.grok_model ?? "gpt-oss-120b";
+
+  const handleSaveGrokConfig = async () => {
+    const payload: { grok_model?: string; grok_api_key?: string } = {
+      grok_model: selectedGrokModel,
+    };
+    if (grokApiKeyInput.trim()) {
+      payload.grok_api_key = grokApiKeyInput.trim();
+    }
+    await updateSettings(payload);
+    setGrokApiKeyInput("");
+    setCustomGrokModel(null);
+    triggerSaved();
+  };
+
   // "Saved" feedback indicator state
   const [showSaved, setShowSaved] = useState(false);
   const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -518,6 +537,87 @@ export function Settings() {
               </button>
             );
           })}
+        </div>
+      </section>
+
+      {/* Grok / xAI Models & API Configuration */}
+      <section className="space-y-4 pt-4 border-t border-neutral-200 dark:border-neutral-800">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
+              <span>🤖</span>
+              <span>AI Agent & Grok / xAI Models</span>
+            </h2>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+              Configure Grok API key and choose from GPT-OSS 120B, Grok 2, or customized endpoints.
+            </p>
+          </div>
+          <span
+            className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+              user?.grok_configured
+                ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
+                : "bg-neutral-100 dark:bg-neutral-800 text-neutral-500"
+            }`}
+          >
+            {user?.grok_configured ? "Grok API Configured" : "Default Provider Active"}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Model Selection */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-neutral-700 dark:text-neutral-300">
+              Selected Grok Model
+            </label>
+            <select
+              value={selectedGrokModel}
+              onChange={(e) => setCustomGrokModel(e.target.value)}
+              className="w-full px-3 py-2 text-xs rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-orange-500"
+            >
+              <option value="gpt-oss-120b">GPT-OSS 120B (High-Performance Open Weights)</option>
+              <option value="grok-2">Grok 2 (Advanced Reasoning & Coding)</option>
+              <option value="grok-beta">Grok Beta</option>
+              <option value="grok-vision-beta">Grok Vision Beta (Multimodal)</option>
+            </select>
+          </div>
+
+          {/* Grok API Key Input */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-neutral-700 dark:text-neutral-300">
+              xAI / Grok API Key
+            </label>
+            <div className="relative flex items-center">
+              <input
+                type={showGrokKey ? "text" : "password"}
+                value={grokApiKeyInput}
+                onChange={(e) => setGrokApiKeyInput(e.target.value)}
+                placeholder={
+                  user?.grok_configured
+                    ? "•••••••••••••••• (Configured — enter new key to replace)"
+                    : "Enter xAI Grok API key (xai-...)"
+                }
+                className="w-full px-3 py-2 pr-16 text-xs rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-orange-500 font-mono"
+              />
+              <button
+                type="button"
+                onClick={() => setShowGrokKey(!showGrokKey)}
+                className="absolute right-2 px-2 py-1 text-[10px] text-neutral-500 hover:text-neutral-300 cursor-pointer"
+              >
+                {showGrokKey ? "Hide" : "Show"}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-end pt-2">
+          <button
+            type="button"
+            onClick={handleSaveGrokConfig}
+            disabled={isUpdating}
+            className="px-4 py-2 text-xs font-medium rounded-lg bg-orange-600 hover:bg-orange-500 text-white transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+          >
+            <span>Save AI Configuration</span>
+          </button>
         </div>
       </section>
 

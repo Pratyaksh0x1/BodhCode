@@ -15,6 +15,8 @@ export interface UserSettingsPayload {
   theme?: ThemePref;
   editor_theme?: EditorThemePref;
   review_mode?: ReviewMode;
+  grok_api_key?: string;
+  grok_model?: string;
 }
 
 export const LANGUAGES_QUERY_KEY = ["meta", "languages"] as const;
