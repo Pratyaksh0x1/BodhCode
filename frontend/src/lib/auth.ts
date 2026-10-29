@@ -33,6 +33,13 @@ export async function pollDesktopAuthTicket(ticket: string): Promise<User | null
   return null;
 }
 
+export async function startChatGPTOAuth(
+  ticket?: string
+): Promise<{ auth_url: string; port: number; state: string }> {
+  const query = ticket ? `?ticket=${encodeURIComponent(ticket)}` : "";
+  return api<{ auth_url: string; port: number; state: string }>(`/auth/chatgpt/oauth/start${query}`);
+}
+
 export function useChatGPTLogin() {
   const queryClient = useQueryClient();
 

@@ -35,6 +35,9 @@ PUBLIC_AUTH_ALLOWLIST: frozenset[str] = frozenset(
         "/auth/github/upgrade",
         "/auth/github/callback",
         "/auth/github/upgrade/callback",
+        "/auth/desktop-poll",
+        "/auth/chatgpt/oauth/start",
+        "/auth/chatgpt/login",
         "/auth/logout",
     }
 )

@@ -1,6 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { AUTH_QUERY_KEY, pollDesktopAuthTicket, useChatGPTLogin } from "../../lib/auth";
+import {
+  AUTH_QUERY_KEY,
+  pollDesktopAuthTicket,
+  startChatGPTOAuth,
+  useChatGPTLogin,
+} from "../../lib/auth";
 import { VITE_API_URL } from "../../lib/env";
 
 interface LoginModalProps {
@@ -11,6 +16,7 @@ interface LoginModalProps {
 export function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const [activeTab, setActiveTab] = useState<"github" | "chatgpt">("github");
   const [isWaitingChrome, setIsWaitingChrome] = useState(false);
+  const [showManualKey, setShowManualKey] = useState(false);
   const [chatgptKey, setChatgptKey] = useState("");
   const [selectedModel, setSelectedModel] = useState("gpt-4o");
   const [chatgptError, setChatgptError] = useState<string | null>(null);
@@ -59,6 +65,40 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
         // Continue polling until timeout or close
       }
     }, 1500);
+  };
+
+  const handleChatGPTOAuthLogin = async () => {
+    setIsWaitingChrome(true);
+    setChatgptError(null);
+    const ticket = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `tk-${Date.now()}`;
+
+    try {
+      const { auth_url } = await startChatGPTOAuth(ticket);
+      window.open(auth_url, "_blank");
+
+      if (pollIntervalRef.current) {
+        window.clearInterval(pollIntervalRef.current);
+      }
+
+      pollIntervalRef.current = window.setInterval(async () => {
+        try {
+          const user = await pollDesktopAuthTicket(ticket);
+          if (user) {
+            if (pollIntervalRef.current) {
+              window.clearInterval(pollIntervalRef.current);
+            }
+            queryClient.setQueryData(AUTH_QUERY_KEY, user);
+            setIsWaitingChrome(false);
+            onClose();
+          }
+        } catch {
+          // Continue polling
+        }
+      }, 1500);
+    } catch (err: unknown) {
+      setIsWaitingChrome(false);
+      setChatgptError(err instanceof Error ? err.message : "Failed to connect to ChatGPT authorization server.");
+    }
   };
 
   const handleChatGPTSubmit = async (e: React.FormEvent) => {
@@ -190,13 +230,13 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
               )}
             </div>
           ) : (
-            <form onSubmit={handleChatGPTSubmit} className="space-y-4">
+            <div className="space-y-4">
               <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs space-y-2">
                 <p className="font-semibold text-emerald-400 flex items-center gap-1.5">
-                  <span>⚡</span> Connect OpenAI Codex &amp; ChatGPT
+                  <span>⚡</span> Login with ChatGPT Account
                 </p>
                 <p className="text-neutral-400 leading-relaxed">
-                  Enables Codex &amp; ChatGPT in your Code Editor for automated project building, complex feature implementation, and architecture assistance.
+                  Sign in directly with your ChatGPT account in Google Chrome. No API key required &mdash; connects seamlessly via OpenAI Codex authentication.
                 </p>
               </div>
 
@@ -206,72 +246,114 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
                 </div>
               )}
 
-              <div className="space-y-1.5">
-                <label
-                  htmlFor="chatgpt-key-input"
-                  className="block text-xs font-semibold text-neutral-300"
-                >
-                  OpenAI / ChatGPT API Key or Token
-                </label>
-                <input
-                  id="chatgpt-key-input"
-                  type="password"
-                  value={chatgptKey}
-                  onChange={(e) => setChatgptKey(e.target.value)}
-                  placeholder="sk-proj-... or ChatGPT session token"
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 font-mono text-neutral-100"
-                />
-              </div>
+              {isWaitingChrome ? (
+                <div className="py-6 flex flex-col items-center justify-center text-center space-y-3 bg-emerald-500/5 dark:bg-emerald-500/10 rounded-xl border border-emerald-500/30">
+                  <div className="w-7 h-7 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold text-emerald-400">
+                      Redirected to Google Chrome for ChatGPT Login...
+                    </p>
+                    <p className="text-[11px] text-neutral-400 max-w-xs">
+                      Sign in with your ChatGPT account in Chrome. BodhCode Studio will automatically complete authorization upon return.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (pollIntervalRef.current) window.clearInterval(pollIntervalRef.current);
+                      setIsWaitingChrome(false);
+                    }}
+                    className="text-xs text-neutral-400 hover:text-neutral-200 underline cursor-pointer mt-1"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <button
+                    type="button"
+                    id="modal-chatgpt-oauth-btn"
+                    onClick={handleChatGPTOAuthLogin}
+                    className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-lg shadow-emerald-600/25 flex items-center justify-center gap-2 cursor-pointer hover:scale-[1.01] active:scale-[0.99]"
+                  >
+                    <span className="text-sm">⚡</span>
+                    <span>Continue with ChatGPT Account (in Chrome)</span>
+                  </button>
 
-              <div className="space-y-1.5">
-                <label
-                  htmlFor="chatgpt-model-select"
-                  className="block text-xs font-semibold text-neutral-300"
-                >
-                  Codex / ChatGPT Default Model
-                </label>
-                <select
-                  id="chatgpt-model-select"
-                  value={selectedModel}
-                  onChange={(e) => setSelectedModel(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 text-neutral-100"
-                >
-                  <option value="gpt-4o">gpt-4o (Recommended - Multimodal &amp; Code)</option>
-                  <option value="gpt-4o-mini">gpt-4o-mini (Fast &amp; Efficient)</option>
-                  <option value="o1-preview">o1-preview (Deep Reasoning)</option>
-                  <option value="o3-mini">o3-mini (High-speed STEM reasoning)</option>
-                </select>
-              </div>
+                  <div className="pt-2 border-t border-neutral-200 dark:border-neutral-800 text-center">
+                    <button
+                      type="button"
+                      onClick={() => setShowManualKey(!showManualKey)}
+                      className="text-[11px] text-neutral-500 hover:text-neutral-300 underline cursor-pointer"
+                    >
+                      {showManualKey ? "Hide manual API key option" : "Or use manual OpenAI API key instead"}
+                    </button>
+                  </div>
 
-              <div className="flex items-center justify-between pt-1">
-                <a
-                  href="https://platform.openai.com/api-keys"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-[11px] text-emerald-400 hover:underline flex items-center gap-1"
-                >
-                  <span>Get OpenAI key in Chrome &rarr;</span>
-                </a>
+                  {showManualKey && (
+                    <form onSubmit={handleChatGPTSubmit} className="space-y-3 pt-2">
+                      <div className="space-y-1.5">
+                        <label
+                          htmlFor="chatgpt-key-input"
+                          className="block text-xs font-semibold text-neutral-300"
+                        >
+                          OpenAI API Key
+                        </label>
+                        <input
+                          id="chatgpt-key-input"
+                          type="password"
+                          value={chatgptKey}
+                          onChange={(e) => setChatgptKey(e.target.value)}
+                          placeholder="sk-proj-..."
+                          className="w-full px-3 py-2 text-xs rounded-xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 font-mono text-neutral-100"
+                        />
+                      </div>
 
-                <button
-                  type="submit"
-                  disabled={chatgptSubmitting || !chatgptKey.trim()}
-                  className="py-2 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition-all shadow-md shadow-emerald-600/20 flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {chatgptSubmitting ? (
-                    <>
-                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      <span>Connecting...</span>
-                    </>
-                  ) : (
-                    <span>Connect Codex &amp; ChatGPT</span>
+                      <div className="space-y-1.5">
+                        <label
+                          htmlFor="chatgpt-model-select"
+                          className="block text-xs font-semibold text-neutral-300"
+                        >
+                          Codex / ChatGPT Default Model
+                        </label>
+                        <select
+                          id="chatgpt-model-select"
+                          value={selectedModel}
+                          onChange={(e) => setSelectedModel(e.target.value)}
+                          className="w-full px-3 py-2 text-xs rounded-xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 text-neutral-100"
+                        >
+                          <option value="gpt-4o">gpt-4o (Recommended - Multimodal &amp; Code)</option>
+                          <option value="gpt-4o-mini">gpt-4o-mini (Fast &amp; Efficient)</option>
+                          <option value="o1-preview">o1-preview (Deep Reasoning)</option>
+                          <option value="o3-mini">o3-mini (High-speed STEM reasoning)</option>
+                        </select>
+                      </div>
+
+                      <div className="flex items-center justify-end pt-1">
+                        <button
+                          type="submit"
+                          disabled={chatgptSubmitting || !chatgptKey.trim()}
+                          className="py-2 px-4 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-semibold transition-all shadow-md shadow-emerald-700/20 flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {chatgptSubmitting ? (
+                            <>
+                              <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                              <span>Connecting...</span>
+                            </>
+                          ) : (
+                            <span>Save API Key</span>
+                          )}
+                        </button>
+                      </div>
+                    </form>
                   )}
-                </button>
-              </div>
-            </form>
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>
     </div>
   );
 }
+

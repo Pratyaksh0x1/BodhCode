@@ -1,6 +1,6 @@
 import { useEffect, useReducer, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { Group, Panel, Separator } from "react-resizable-panels";
+import { Group, Panel, Separator, type Layout } from "react-resizable-panels";
 import { useMe } from "../lib/auth";
 import {
   useDeleteFile,
@@ -24,10 +24,13 @@ import { AgentPanel, type PendingSelection } from "../components/editor/agent/Ag
 import { BottomPanel } from "../components/editor/BottomPanel";
 import { EditorTabs } from "../components/editor/EditorTabs";
 import { EmbeddedBrowser } from "../components/editor/EmbeddedBrowser";
+import { ExtensionsSidebar } from "../components/editor/ExtensionsSidebar";
 import { FileExplorer } from "../components/editor/FileExplorer";
+import { MappingSidebar } from "../components/editor/MappingSidebar";
 import { MonacoEditorPane } from "../components/editor/MonacoEditorPane";
 import { MultilingualViewer } from "../components/editor/MultilingualViewer";
 import { QuickOpenModal } from "../components/editor/QuickOpenModal";
+import { RunSidebar } from "../components/editor/RunSidebar";
 import { StatusBar } from "../components/editor/StatusBar";
 import { PushModalWizard } from "../components/editor/push/PushModalWizard";
 import { initialTabState, tabReducer } from "../components/editor/tabState";
@@ -87,19 +90,35 @@ export function EditorWorkspace() {
   );
 
   // Load layout from localStorage
-  const savedHorizontalLayout = (() => {
+  const savedHorizontalLayout: Layout | undefined = (() => {
     try {
       const stored = localStorage.getItem("bodhcode.editor.layout.horizontal");
-      return stored ? JSON.parse(stored) : undefined;
+      if (stored) {
+        const parsed: unknown = JSON.parse(stored);
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+          const layout = parsed as Layout;
+          if (typeof layout.sidebar === "number" && layout.sidebar < 18) {
+            layout.sidebar = 22;
+          }
+          return layout;
+        }
+      }
+      return undefined;
     } catch {
       return undefined;
     }
   })();
 
-  const savedVerticalLayout = (() => {
+  const savedVerticalLayout: Layout | undefined = (() => {
     try {
       const stored = localStorage.getItem("bodhcode.editor.layout.vertical");
-      return stored ? JSON.parse(stored) : undefined;
+      if (stored) {
+        const parsed: unknown = JSON.parse(stored);
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+          return parsed as Layout;
+        }
+      }
+      return undefined;
     } catch {
       return undefined;
     }
@@ -426,7 +445,7 @@ export function EditorWorkspace() {
                 <Panel
                   id="sidebar"
                   defaultSize={sidebarView === "browser" ? 40 : 22}
-                  minSize={14}
+                  minSize={18}
                   maxSize={60}
                 >
                   {sidebarView === "browser" ? (
@@ -437,6 +456,19 @@ export function EditorWorkspace() {
                     <MultilingualViewer
                       repoId={repo.id}
                       onClose={() => setSidebarView(null)}
+                    />
+                  ) : sidebarView === "mapping" ? (
+                    <MappingSidebar
+                      repoId={repo.id}
+                      activeFilePath={tabState.activePath}
+                      onOpenFile={handleOpenFile}
+                    />
+                  ) : sidebarView === "extensions" ? (
+                    <ExtensionsSidebar />
+                  ) : sidebarView === "run" ? (
+                    <RunSidebar
+                      repoId={repo.id}
+                      onExecuteCommand={() => setIsBottomOpen(true)}
                     />
                   ) : (
                     <FileExplorer
@@ -526,6 +558,7 @@ export function EditorWorkspace() {
                         onClosePanel={() => setIsBottomOpen(false)}
                         onOpenPushModal={() => setIsPushModalOpen(true)}
                         theme={editorTheme}
+                        repoId={repo.id}
                       />
                     </Panel>
                   </>

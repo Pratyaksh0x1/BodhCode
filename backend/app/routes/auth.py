@@ -1,4 +1,6 @@
 import json
+import logging
+import secrets
 import time
 from typing import Annotated, Any
 
@@ -7,6 +9,19 @@ from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
+from app.auth.chatgpt_oauth import (
+    _CHATGPT_SESSIONS,
+    DEFAULT_PORT,
+    FALLBACK_PORT,
+    OPENAI_CLIENT_ID,
+    build_chatgpt_authorize_url,
+    decode_jwt_payload,
+    exchange_code_for_tokens,
+    generate_pkce,
+    obtain_api_key,
+    start_chatgpt_callback_server,
+    stop_chatgpt_callback_server,
+)
 from app.auth.crypto import encrypt_token
 from app.auth.deps import get_current_user, require_csrf_header
 from app.auth.github_oauth import get_oauth
@@ -21,6 +36,8 @@ from app.models.push import ActionLog, PushPreview
 from app.models.repo import Repo
 from app.models.user import User, UserPublic
 from app.rate_limiter import rate_limit_auth_ip
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/auth",
@@ -328,6 +345,149 @@ def desktop_poll(
             }
 
     return {"status": "pending"}
+
+
+def _clean_old_chatgpt_sessions() -> None:
+    now = time.time()
+    expired = [k for k, v in _CHATGPT_SESSIONS.items() if now - v.get("created_at", 0) > 600]
+    for k in expired:
+        _CHATGPT_SESSIONS.pop(k, None)
+
+
+async def _handle_chatgpt_callback(code: str, state: str, port: int) -> None:
+    session_data = _CHATGPT_SESSIONS.pop(state, None)
+    if not session_data:
+        logger.warning("No matching session found for ChatGPT state: %s", state)
+        await stop_chatgpt_callback_server(port)
+        return
+
+    verifier = session_data["verifier"]
+    ticket = session_data.get("ticket")
+    existing_user_id = session_data.get("user_id")
+    redirect_uri = f"http://localhost:{port}/auth/callback"
+
+    try:
+        tokens = await exchange_code_for_tokens(code, verifier, redirect_uri)
+        id_token = tokens.get("id_token", "")
+        access_token = tokens.get("access_token", "")
+
+        # Attempt token-exchange for OpenAI API key (codex-rs pattern), fallback to access_token
+        api_key = await obtain_api_key(id_token) if id_token else None
+        token_to_store = api_key or access_token or id_token
+
+        # Parse user claims from id_token
+        claims = decode_jwt_payload(id_token) if id_token else {}
+        email = claims.get("email")
+        auth_claims = claims.get("https://api.openai.com/auth", {})
+        chatgpt_user_id = auth_claims.get("chatgpt_user_id") or claims.get("sub", "")
+        plan_type = auth_claims.get("chatgpt_plan_type", "")
+
+        from app.db import engine
+
+        with Session(engine) as db_session:
+            user = None
+            if existing_user_id:
+                user = db_session.get(User, existing_user_id)
+            if not user and email:
+                user = db_session.exec(select(User).where(User.email == email)).first()
+
+            if user:
+                user.encrypted_openai_key = encrypt_token(token_to_store)
+                user.openai_model = "gpt-4o"
+                if user.auth_provider == "github":
+                    user.auth_provider = "both"
+                db_session.add(user)
+                db_session.commit()
+                db_session.refresh(user)
+            else:
+                user_login = (
+                    email.split("@")[0]
+                    if email
+                    else f"chatgpt_{chatgpt_user_id[:8]}"
+                    if chatgpt_user_id
+                    else "chatgpt_user"
+                )
+                plan_suffix = f" ({plan_type.capitalize()})" if plan_type else ""
+                new_user = User(
+                    github_id=int(time.time() * 1000) % 2147483647,
+                    login=user_login,
+                    name=f"ChatGPT User{plan_suffix}",
+                    email=email,
+                    avatar_url="https://chatgpt.com/favicon.ico",
+                    encrypted_github_token="",
+                    encrypted_openai_key=encrypt_token(token_to_store),
+                    openai_model="gpt-4o",
+                    auth_provider="chatgpt",
+                )
+                db_session.add(new_user)
+                db_session.commit()
+                db_session.refresh(new_user)
+                user = new_user
+
+            if ticket:
+                _DESKTOP_TICKETS[ticket] = {
+                    "status": "approved",
+                    "user_id": user.id,
+                    "created_at": time.time(),
+                }
+    except Exception as exc:
+        logger.error("Failed to complete ChatGPT OAuth exchange: %s", exc)
+        if ticket:
+            _DESKTOP_TICKETS[ticket] = {
+                "status": "failed",
+                "error": str(exc),
+                "created_at": time.time(),
+            }
+    finally:
+        await stop_chatgpt_callback_server(port)
+
+
+@router.get("/chatgpt/oauth/start")
+async def chatgpt_oauth_start(
+    request: Request,
+    ticket: str | None = None,
+) -> dict[str, Any]:
+    """Initiate ChatGPT OAuth code flow with PKCE according to OpenAI Codex protocol."""
+    code_verifier, code_challenge = generate_pkce()
+    state = secrets.token_urlsafe(32)
+
+    # Determine port (prefer DEFAULT_PORT 1455, fallback to 1457)
+    port = DEFAULT_PORT
+    try:
+        await start_chatgpt_callback_server(port, _handle_chatgpt_callback)
+    except OSError:
+        port = FALLBACK_PORT
+        await start_chatgpt_callback_server(port, _handle_chatgpt_callback)
+
+    redirect_uri = f"http://localhost:{port}/auth/callback"
+    auth_url = build_chatgpt_authorize_url(
+        client_id=OPENAI_CLIENT_ID,
+        redirect_uri=redirect_uri,
+        code_challenge=code_challenge,
+        state=state,
+    )
+
+    _clean_old_chatgpt_sessions()
+    _CHATGPT_SESSIONS[state] = {
+        "verifier": code_verifier,
+        "ticket": ticket,
+        "user_id": request.session.get("user_id"),
+        "port": port,
+        "created_at": time.time(),
+    }
+
+    if ticket:
+        _cleanup_old_tickets()
+        _DESKTOP_TICKETS[ticket] = {
+            "status": "pending",
+            "created_at": time.time(),
+        }
+
+    return {
+        "auth_url": auth_url,
+        "port": port,
+        "state": state,
+    }
 
 
 class ChatGPTLoginRequest(BaseModel):

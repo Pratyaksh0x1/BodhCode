@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { DiffEditor } from "@monaco-editor/react";
 import type { ChangedFileItem, FileDiffResponse } from "../../lib/files";
 import type { ResolvedEditorTheme } from "../../lib/theme";
+import { api } from "../../lib/api";
 
 interface BottomPanelProps {
   changes: ChangedFileItem[];
@@ -13,6 +14,16 @@ interface BottomPanelProps {
   onClosePanel: () => void;
   onOpenPushModal?: () => void;
   theme: ResolvedEditorTheme;
+  repoId?: number | string;
+}
+
+interface TerminalEntry {
+  id: string;
+  command: string;
+  stdout: string;
+  stderr: string;
+  returncode: number;
+  duration_ms: number;
 }
 
 export function BottomPanel({
@@ -25,9 +36,128 @@ export function BottomPanel({
   onClosePanel,
   onOpenPushModal,
   theme,
+  repoId,
 }: BottomPanelProps) {
-  const [activeTab, setActiveTab] = useState<"changes" | "problems" | "explorer">("changes");
+  const [activeTab, setActiveTab] = useState<"terminal" | "changes" | "problems" | "explorer">("terminal");
   const [isSideBySide, setIsSideBySide] = useState(true);
+
+  // Terminal state
+  const [terminalHistory, setTerminalHistory] = useState<TerminalEntry[]>([
+    {
+      id: "welcome",
+      command: "echo 'BodhCode Terminal Ready. Type any CLI command (dir, git, node, npm, python).'",
+      stdout: "BodhCode Terminal Ready. Type any CLI command (dir, git, node, npm, python).\n",
+      stderr: "",
+      returncode: 0,
+      duration_ms: 1,
+    },
+  ]);
+  const [currentInput, setCurrentInput] = useState("");
+  const [commandHistory, setCommandHistory] = useState<string[]>([]);
+  const [historyPointer, setHistoryPointer] = useState<number>(-1);
+  const [isTerminalRunning, setIsTerminalRunning] = useState(false);
+  const terminalBottomRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll terminal
+  useEffect(() => {
+    if (activeTab === "terminal") {
+      terminalBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [terminalHistory, activeTab]);
+
+  const handleTerminalSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cmd = currentInput.trim();
+    if (!cmd || isTerminalRunning) return;
+
+    setCurrentInput("");
+    setCommandHistory((prev) => [...prev, cmd]);
+    setHistoryPointer(-1);
+    setIsTerminalRunning(true);
+
+    const entryId = `entry-${Date.now()}`;
+
+    try {
+      if (cmd === "clear" || cmd === "cls") {
+        setTerminalHistory([]);
+        setIsTerminalRunning(false);
+        return;
+      }
+
+      if (!repoId) {
+        setTerminalHistory((prev) => [
+          ...prev,
+          {
+            id: entryId,
+            command: cmd,
+            stdout: "",
+            stderr: "No active repository selected to execute commands in.",
+            returncode: 1,
+            duration_ms: 0,
+          },
+        ]);
+        setIsTerminalRunning(false);
+        return;
+      }
+
+      const res = await api<{
+        stdout: string;
+        stderr: string;
+        returncode: number;
+        duration_ms: number;
+      }>(`/repos/${repoId}/terminal/exec`, {
+        method: "POST",
+        body: JSON.stringify({ command: cmd }),
+      });
+
+      setTerminalHistory((prev) => [
+        ...prev,
+        {
+          id: entryId,
+          command: cmd,
+          stdout: res.stdout,
+          stderr: res.stderr,
+          returncode: res.returncode,
+          duration_ms: res.duration_ms,
+        },
+      ]);
+    } catch (err: unknown) {
+      setTerminalHistory((prev) => [
+        ...prev,
+        {
+          id: entryId,
+          command: cmd,
+          stdout: "",
+          stderr: err instanceof Error ? err.message : "Command execution failed.",
+          returncode: -1,
+          duration_ms: 0,
+        },
+      ]);
+    } finally {
+      setIsTerminalRunning(false);
+    }
+  };
+
+  const handleTerminalKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      if (commandHistory.length === 0) return;
+      const nextPointer = historyPointer === -1 ? commandHistory.length - 1 : Math.max(0, historyPointer - 1);
+      setHistoryPointer(nextPointer);
+      setCurrentInput(commandHistory[nextPointer]);
+    } else if (e.key === "ArrowDown") {
+      e.preventDefault();
+      if (historyPointer === -1) return;
+      const nextPointer = historyPointer + 1;
+      if (nextPointer >= commandHistory.length) {
+        setHistoryPointer(-1);
+        setCurrentInput("");
+      } else {
+        setHistoryPointer(nextPointer);
+        setCurrentInput(commandHistory[nextPointer]);
+      }
+    }
+  };
 
   // Explorer & Ping State
   const [explorerMode, setExplorerMode] = useState<"workspace" | "github">("workspace");
@@ -66,6 +196,20 @@ export function BottomPanel({
       {/* Panel Header */}
       <div className="flex items-center justify-between px-3 py-1.5 bg-neutral-900 border-b border-neutral-800 text-xs shrink-0 select-none">
         <div className="flex items-center gap-1">
+          {/* Terminal Tab */}
+          <button
+            type="button"
+            onClick={() => setActiveTab("terminal")}
+            className={`px-3 py-1 rounded font-medium flex items-center gap-1.5 transition-colors cursor-pointer ${
+              activeTab === "terminal"
+                ? "bg-neutral-800 text-orange-400"
+                : "text-neutral-400 hover:text-neutral-200"
+            }`}
+          >
+            <span>💻 Terminal</span>
+          </button>
+
+          {/* Changes Tab */}
           <button
             type="button"
             onClick={() => setActiveTab("changes")}
@@ -81,6 +225,7 @@ export function BottomPanel({
             </span>
           </button>
 
+          {/* Problems Tab */}
           <button
             type="button"
             onClick={() => setActiveTab("problems")}
@@ -96,6 +241,7 @@ export function BottomPanel({
             </span>
           </button>
 
+          {/* Explorer Tab */}
           <button
             type="button"
             onClick={() => setActiveTab("explorer")}
@@ -105,12 +251,23 @@ export function BottomPanel({
                 : "text-neutral-400 hover:text-neutral-200"
             }`}
           >
-            <span>🗺️ Graph &amp; Repo Explorer</span>
+            <span>🗺️ Graph Explorer</span>
           </button>
         </div>
 
         {/* Right side controls */}
         <div className="flex items-center gap-2">
+          {activeTab === "terminal" && (
+            <button
+              type="button"
+              onClick={() => setTerminalHistory([])}
+              title="Clear Terminal Output"
+              className="px-2 py-0.5 rounded bg-neutral-800 hover:bg-neutral-700 text-[11px] text-neutral-300 transition-colors cursor-pointer"
+            >
+              Clear
+            </button>
+          )}
+
           {activeTab === "changes" && changes.length > 0 && onOpenPushModal && (
             <button
               type="button"
@@ -146,9 +303,65 @@ export function BottomPanel({
 
       {/* Panel Content */}
       <div className="flex-1 overflow-hidden">
+        {/* Terminal View */}
+        {activeTab === "terminal" && (
+          <div className="h-full flex flex-col bg-neutral-950 font-mono text-xs overflow-hidden select-text">
+            {/* Terminal output logs */}
+            <div className="flex-1 overflow-y-auto p-3 space-y-2">
+              {terminalHistory.map((entry) => (
+                <div key={entry.id} className="space-y-1">
+                  <div className="flex items-center gap-2 text-neutral-400">
+                    <span className="text-orange-400 font-bold">PS &gt;</span>
+                    <span className="text-neutral-100 font-semibold">{entry.command}</span>
+                    {entry.duration_ms > 0 && (
+                      <span className="text-[10px] text-neutral-600 ml-auto">
+                        {entry.duration_ms}ms
+                      </span>
+                    )}
+                  </div>
+                  {entry.stdout && (
+                    <pre className="text-neutral-300 whitespace-pre-wrap pl-4 leading-relaxed font-mono text-[11px]">
+                      {entry.stdout}
+                    </pre>
+                  )}
+                  {entry.stderr && (
+                    <pre className="text-rose-400 whitespace-pre-wrap pl-4 leading-relaxed font-mono text-[11px]">
+                      {entry.stderr}
+                    </pre>
+                  )}
+                </div>
+              ))}
+              {isTerminalRunning && (
+                <div className="flex items-center gap-2 text-orange-400 text-[11px] animate-pulse">
+                  <span className="inline-block w-2 h-2 rounded-full bg-orange-400 animate-ping" />
+                  <span>Executing command in repository...</span>
+                </div>
+              )}
+              <div ref={terminalBottomRef} />
+            </div>
+
+            {/* Terminal prompt input */}
+            <form
+              onSubmit={handleTerminalSubmit}
+              className="flex items-center gap-2 px-3 py-2 bg-neutral-900/90 border-t border-neutral-800 shrink-0"
+            >
+              <span className="text-orange-400 font-bold text-xs select-none">PS &gt;</span>
+              <input
+                type="text"
+                value={currentInput}
+                onChange={(e) => setCurrentInput(e.target.value)}
+                onKeyDown={handleTerminalKeyDown}
+                disabled={isTerminalRunning}
+                placeholder="Type command (e.g. dir, npm test, git status)..."
+                className="flex-1 bg-transparent text-neutral-100 text-xs font-mono focus:outline-none placeholder-neutral-600"
+              />
+            </form>
+          </div>
+        )}
+
         {activeTab === "problems" && (
           <div className="h-full flex items-center justify-center text-xs text-neutral-500">
-            Diagnostics not available yet
+            No problems detected in workspace files.
           </div>
         )}
 
@@ -181,12 +394,14 @@ export function BottomPanel({
                                 ? "text-amber-400"
                                 : item.status === "added"
                                 ? "text-emerald-400"
-                                : "text-rose-400 line-through"
+                                : "text-rose-400"
                             }`}
                           >
                             {item.status === "modified" ? "M" : item.status === "added" ? "A" : "D"}
                           </span>
-                          <span className="truncate">{item.path}</span>
+                          <span className="truncate font-mono" title={item.path}>
+                            {item.path}
+                          </span>
                         </div>
 
                         <button
@@ -195,10 +410,10 @@ export function BottomPanel({
                             e.stopPropagation();
                             onRevertFile(item.path);
                           }}
-                          title="Revert file"
-                          className="opacity-0 group-hover:opacity-100 text-[10px] px-1.5 py-0.5 rounded bg-neutral-800 hover:bg-neutral-700 text-amber-400 shrink-0"
+                          title="Discard changes"
+                          className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-neutral-700 text-neutral-400 hover:text-neutral-100 transition-opacity"
                         >
-                          Revert
+                          ↩
                         </button>
                       </div>
                     );
@@ -208,95 +423,80 @@ export function BottomPanel({
             </div>
 
             {/* Diff Viewer Pane */}
-            <div className="flex-1 h-full overflow-hidden bg-neutral-950">
-              {!activeDiffPath ? (
+            <div className="flex-1 h-full overflow-hidden">
+              {isDiffLoading ? (
+                <div className="h-full flex items-center justify-center text-xs text-neutral-400">
+                  <div className="w-4 h-4 border-2 border-orange-500 border-t-transparent rounded-full animate-spin mr-2" />
+                  Loading diff...
+                </div>
+              ) : !activeDiffPath ? (
                 <div className="h-full flex items-center justify-center text-xs text-neutral-500">
-                  Select a changed file to view diff
+                  Select a changed file to view diff.
                 </div>
-              ) : isDiffLoading ? (
-                <div className="h-full flex items-center justify-center text-xs text-neutral-400 gap-2">
-                  <div className="w-4 h-4 border-2 border-orange-400 border-t-transparent rounded-full animate-spin" />
-                  <span>Loading diff...</span>
-                </div>
-              ) : diffData ? (
-                <div className="h-full w-full">
-                  <DiffEditor
-                    key={`${activeDiffPath}-${isSideBySide}`}
-                    original={diffData.original}
-                    modified={diffData.modified}
-                    theme={theme}
-                    options={{
-                      renderSideBySide: isSideBySide,
-                      readOnly: true,
-                      automaticLayout: true,
-                      minimap: { enabled: false },
-                      fontSize: 12,
-                    }}
-                  />
+              ) : !diffData ? (
+                <div className="h-full flex items-center justify-center text-xs text-neutral-500">
+                  Diff not available.
                 </div>
               ) : (
-                <div className="h-full flex items-center justify-center text-xs text-rose-400">
-                  Failed to load diff
-                </div>
+                <DiffEditor
+                  original={diffData.original}
+                  modified={diffData.modified}
+                  language="typescript"
+                  theme={theme}
+                  options={{
+                    readOnly: true,
+                    renderSideBySide: isSideBySide,
+                    minimap: { enabled: false },
+                    scrollBeyondLastLine: false,
+                    fontSize: 12,
+                    lineNumbers: "on",
+                    glyphMargin: false,
+                    folding: false,
+                  }}
+                />
               )}
             </div>
           </div>
         )}
-        {/* Explorer Tab */}
-        {activeTab === "explorer" && (
-          <div className="flex-1 flex flex-col p-3 overflow-auto bg-neutral-950 text-xs gap-3">
-            {/* Dual Mode Switch */}
-            <div className="flex items-center justify-between pb-2 border-b border-neutral-800">
-              <div className="flex items-center gap-1.5 bg-neutral-900 p-1 rounded-lg border border-neutral-800">
-                <button
-                  type="button"
-                  onClick={() => setExplorerMode("workspace")}
-                  className={`px-3 py-1 rounded text-xs font-medium cursor-pointer transition-colors ${
-                    explorerMode === "workspace"
-                      ? "bg-orange-600 text-white"
-                      : "text-neutral-400 hover:text-neutral-200"
-                  }`}
-                >
-                  📁 Workspace Map
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setExplorerMode("github")}
-                  className={`px-3 py-1 rounded text-xs font-medium cursor-pointer transition-colors ${
-                    explorerMode === "github"
-                      ? "bg-orange-600 text-white"
-                      : "text-neutral-400 hover:text-neutral-200"
-                  }`}
-                >
-                  🐙 Any GitHub Repo
-                </button>
-              </div>
 
-              <span className="text-[11px] text-neutral-400">
-                Deterministic Tree-Sitter AST &bull; Zero hallucinated structure
-              </span>
+        {activeTab === "explorer" && (
+          <div className="h-full flex flex-col p-4 space-y-4 overflow-y-auto">
+            {/* Explorer Mode Switch */}
+            <div className="flex items-center gap-2 border-b border-neutral-800 pb-2">
+              <button
+                type="button"
+                onClick={() => setExplorerMode("workspace")}
+                className={`px-3 py-1 rounded text-xs font-semibold cursor-pointer ${
+                  explorerMode === "workspace"
+                    ? "bg-orange-500 text-white"
+                    : "bg-neutral-800 text-neutral-400 hover:text-neutral-200"
+                }`}
+              >
+                Local Workspace
+              </button>
+              <button
+                type="button"
+                onClick={() => setExplorerMode("github")}
+                className={`px-3 py-1 rounded text-xs font-semibold cursor-pointer ${
+                  explorerMode === "github"
+                    ? "bg-orange-500 text-white"
+                    : "bg-neutral-800 text-neutral-400 hover:text-neutral-200"
+                }`}
+              >
+                Inspect Public GitHub Repo
+              </button>
             </div>
 
-            {/* Mode 1: Workspace */}
-            {explorerMode === "workspace" && (
-              <div className="space-y-3">
-                <div className="p-3 rounded-lg border border-neutral-800 bg-neutral-900/50 flex items-center justify-between">
-                  <div>
-                    <div className="font-semibold text-neutral-200">Active Workspace Dependency Graph</div>
-                    <div className="text-[11px] text-neutral-400 mt-0.5">
-                      Analyzed from local filesystem with tree-sitter AST parser.
-                    </div>
-                  </div>
-                  <span className="text-xs px-2.5 py-1 rounded bg-emerald-500/20 text-emerald-400 font-mono">
-                    Live Grounded
-                  </span>
-                </div>
+            {explorerMode === "workspace" ? (
+              <div className="p-4 rounded-xl border border-neutral-800 bg-neutral-900/40 space-y-2">
+                <h4 className="font-semibold text-neutral-200 text-xs">Active Repository Context</h4>
+                <p className="text-xs text-neutral-400">
+                  Parsed AST dependencies are active. Use the 🗺️ GitHub Mapping view in the sidebar or click Open 2D Canvas to inspect graph nodes.
+                </p>
               </div>
-            )}
-
-            {/* Mode 2: GitHub Repo */}
-            {explorerMode === "github" && (
-              <div className="space-y-3">
+            ) : (
+              <div className="p-4 rounded-xl border border-neutral-800 bg-neutral-900/40 space-y-3">
+                <h4 className="font-semibold text-neutral-200 text-xs">Analyze External GitHub Repository</h4>
                 <div className="flex items-center gap-2">
                   <input
                     type="text"
