@@ -1,0 +1,53 @@
+name: Dependency Security Audit
+
+on:
+  schedule:
+    - cron: "0 3 * * 1" # Weekly every Monday at 03:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    name: Pip & Pnpm Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12 & uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+          enable-cache: true
+
+      - name: Python Dependency Audit (pip-audit)
+        working-directory: backend
+        continue-on-error: true
+        run: |
+          uv sync --frozen
+          uv run --with pip-audit pip-audit --desc
+
+      - name: Set up Node.js 20 & pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+          cache-dependency-path: "frontend/pnpm-lock.yaml"
+
+      - name: Frontend Dependency Audit (pnpm audit)
+        working-directory: frontend
+        continue-on-error: true
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm audit

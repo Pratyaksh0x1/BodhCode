@@ -3,8 +3,24 @@ from typing import Annotated
 from fastapi import Depends, HTTPException, Request, status
 from sqlmodel import Session
 
+from app.auth.scope import (
+    ScopeRequiredError,
+    TokenRevokedError,
+    require_scope,
+    verify_live_scope,
+)
 from app.db import get_session
 from app.models.user import User
+
+__all__ = [
+    "ScopeRequiredError",
+    "TokenRevokedError",
+    "get_current_user",
+    "get_optional_user",
+    "require_csrf_header",
+    "require_scope",
+    "verify_live_scope",
+]
 
 
 async def require_csrf_header(request: Request) -> None:

@@ -3,7 +3,7 @@ import { render, renderHook, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { RequireAuth } from "../components/RequireAuth";
-import { useLogout, useMe, type User } from "./auth";
+import { useDisconnect, useLogout, useMe, type User } from "./auth";
 
 function createWrapper() {
   const queryClient = new QueryClient({
@@ -39,6 +39,7 @@ describe("auth and RequireAuth", () => {
       email: "test@example.com",
       preferred_language: "en",
       theme: "dark",
+      editor_theme: "auto",
     };
 
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
@@ -127,5 +128,38 @@ describe("auth and RequireAuth", () => {
         method: "POST",
       })
     );
+  });
+
+  it("useDisconnect sends POST to /auth/disconnect and clears cache", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
+      ok: true,
+      status: 204,
+      json: async () => ({}),
+    } as Response);
+
+    const queryClient = new QueryClient();
+    const clearSpy = vi.spyOn(queryClient, "clear");
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+
+    const locationMock = { href: "/settings" };
+    vi.stubGlobal("location", locationMock);
+
+    try {
+      const { result } = renderHook(() => useDisconnect(), { wrapper });
+      await result.current();
+
+      expect(fetchSpy).toHaveBeenCalledWith(
+        expect.stringContaining("/auth/disconnect"),
+        expect.objectContaining({
+          method: "POST",
+        })
+      );
+      expect(clearSpy).toHaveBeenCalled();
+      expect(locationMock.href).toBe("/");
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

@@ -2,6 +2,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Layout } from "./components/Layout";
 import { RequireAuth } from "./components/RequireAuth";
+import { RateLimitBanner } from "./components/common/RateLimitBanner";
+import { EditorWorkspace } from "./pages/EditorWorkspace";
 import { Home } from "./pages/Home";
 import { NotFound } from "./pages/NotFound";
 import { RepoDetail } from "./pages/RepoDetail";
@@ -20,7 +22,16 @@ export function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
+        <RateLimitBanner />
         <Routes>
+          <Route
+            path="repos/:id/editor"
+            element={
+              <RequireAuth>
+                <EditorWorkspace />
+              </RequireAuth>
+            }
+          />
           <Route path="/" element={<Layout />}>
             <Route index element={<Home />} />
             <Route

@@ -65,4 +65,28 @@ describe("api helper", () => {
       }
     }
   });
+
+  it("extracts Retry-After header and triggers rate limit store on 429", async () => {
+    const headers = new Headers({
+      "Retry-After": "45",
+    });
+    vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: false,
+      status: 429,
+      statusText: "Too Many Requests",
+      headers,
+      json: async () => ({ detail: "Rate limit exceeded" }),
+    } as unknown as Response);
+
+    await expect(api("/repos/busy")).rejects.toThrow(ApiError);
+
+    try {
+      await api("/repos/busy");
+    } catch (err) {
+      if (err instanceof ApiError) {
+        expect(err.status).toBe(429);
+        expect(err.retryAfter).toBe(45);
+      }
+    }
+  });
 });

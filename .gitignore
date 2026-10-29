@@ -27,8 +27,8 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
+/lib/
+/lib64/
 parts/
 sdist/
 var/
@@ -99,6 +99,8 @@ tmp/
 *.zip
 *.tar.gz
 *.tgz
+backend/evals/results/
+evals/results/
 
 # ==============================================================================
 # Operating System & IDE Configurations
@@ -123,3 +125,5 @@ desktop.ini
 # Neon CLI & Cloud
 .neon/
 .neon
+codex-main/
+vscode-main/

@@ -1,0 +1,1 @@
+"""Internationalization catalogues and utilities."""

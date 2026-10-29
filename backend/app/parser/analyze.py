@@ -41,6 +41,7 @@ def analyze_repo_files(files: Mapping[str, bytes]) -> list[AnalyzedFile]:
                 path=path,
                 facts=facts,
                 resolved_imports=resolved_imports,
+                size=len(source),
             )
         )
 

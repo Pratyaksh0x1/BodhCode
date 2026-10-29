@@ -53,3 +53,4 @@ class AnalyzedFile:
     path: str
     facts: FileFacts
     resolved_imports: tuple[ResolvedImport, ...]
+    size: int = 0

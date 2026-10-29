@@ -11,6 +11,7 @@ dependencies = [
     "groq>=1.7.0",
     "httpx>=0.28.1",
     "itsdangerous>=2.2.0",
+    "jsonschema>=4.26.0",
     "langsmith>=0.14.12",
     "lingua-language-detector>=2.2.0",
     "networkx>=3.7",
@@ -47,4 +48,4 @@ select = ["E", "F", "I", "B", "UP"]
 asyncio_mode = "auto"
 testpaths = ["tests"]
 pythonpath = ["."]
-addopts = ["--import-mode=importlib"]
+addopts = ["--import-mode=importlib", "-s"]

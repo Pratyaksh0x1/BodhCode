@@ -21,6 +21,8 @@ class User(SQLModel, table=True):
     email: str | None = Field(default=None)
     preferred_language: str = Field(default="en")
     theme: str = Field(default="dark")
+    editor_theme: str = Field(default="auto")
+    review_mode: str = Field(default="review")
     encrypted_github_token: str
     token_scopes: str = Field(default="read:user,user:email")
     created_at: datetime = Field(default_factory=utc_now)
@@ -40,3 +42,5 @@ class UserPublic(SQLModel):
     email: str | None = None
     preferred_language: str
     theme: str
+    editor_theme: str = "auto"
+    review_mode: str = "review"

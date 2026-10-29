@@ -1,9 +1,10 @@
+import os
 from functools import lru_cache
 from typing import Literal
 from urllib.parse import urlparse
 
 from cryptography.fernet import Fernet
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 DISALLOWED_PLACEHOLDERS = {
@@ -33,8 +34,56 @@ class Settings(BaseSettings):
     GITHUB_CLIENT_SECRET: str
     TOKEN_ENCRYPTION_KEY: str
 
-    ENV: Literal["development", "production"] = "development"
+    ENV: Literal["development", "production", "test"] = "development"
     DATA_DIR: str = "./data"
+    ALLOWED_ORIGINS: list[str] = []
+
+    # Groq LLM Configuration
+    GROQ_API_KEY: str
+    GROQ_MODEL: str
+    GROQ_FAST_MODEL: str | None = None
+    LLM_MAX_CONCURRENCY: int = 3
+    LLM_TIMEOUT_SECONDS: float = 60.0
+
+    # LangSmith Tracing & Observability
+    LANGSMITH_TRACING: bool = False
+    LANGSMITH_API_KEY: str | None = None
+    LANGSMITH_PROJECT: str = "bodhcode"
+    LANGSMITH_ENDPOINT: str | None = None
+
+    @field_validator("LLM_MAX_CONCURRENCY")
+    @classmethod
+    def validate_llm_concurrency(cls, v: int) -> int:
+        if not (1 <= v <= 10):
+            raise ValueError("LLM_MAX_CONCURRENCY must be between 1 and 10")
+        return v
+
+    @field_validator("GROQ_API_KEY", "GROQ_MODEL")
+    @classmethod
+    def validate_groq_required(cls, v: str) -> str:
+        stripped = v.strip() if v else ""
+        if not stripped:
+            raise ValueError("Groq configuration value cannot be empty")
+        return stripped
+
+    @field_validator("ALLOWED_ORIGINS", mode="before")
+    @classmethod
+    def parse_allowed_origins(cls, v: object) -> list[str]:
+        if isinstance(v, str):
+            return [o.strip() for o in v.split(",") if o.strip()]
+        if isinstance(v, list):
+            return [str(o).strip() for o in v if str(o).strip()]
+        return []
+
+    @model_validator(mode="after")
+    def _validate_langsmith_and_defaults(self) -> "Settings":
+        if not self.GROQ_FAST_MODEL:
+            self.GROQ_FAST_MODEL = self.GROQ_MODEL
+        if self.LANGSMITH_TRACING and (
+            not self.LANGSMITH_API_KEY or not self.LANGSMITH_API_KEY.strip()
+        ):
+            raise ValueError("LANGSMITH_API_KEY is required when LANGSMITH_TRACING is true")
+        return self
 
     @field_validator("APP_SECRET_KEY")
     @classmethod
@@ -84,3 +133,20 @@ class Settings(BaseSettings):
 def get_settings() -> Settings:
     """Return cached Settings instance for dependency injection."""
     return Settings()
+
+
+def export_langsmith_env(settings: Settings) -> None:
+    """Copy LANGSMITH_* configuration values into os.environ for the LangSmith SDK.
+
+    pydantic-settings does not export values to os.environ, but the LangSmith SDK
+    reads environment variables. This must be invoked explicitly at startup.
+    """
+    if settings.LANGSMITH_TRACING:
+        os.environ["LANGSMITH_TRACING"] = "true"
+        os.environ["LANGSMITH_PROJECT"] = settings.LANGSMITH_PROJECT
+        if settings.LANGSMITH_API_KEY:
+            os.environ["LANGSMITH_API_KEY"] = settings.LANGSMITH_API_KEY
+        if settings.LANGSMITH_ENDPOINT:
+            os.environ["LANGSMITH_ENDPOINT"] = settings.LANGSMITH_ENDPOINT
+    else:
+        os.environ["LANGSMITH_TRACING"] = "false"

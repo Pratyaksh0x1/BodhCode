@@ -134,11 +134,7 @@ def _match_path_pattern(spec: str, pattern: str) -> str | None:
     if "*" not in pattern:
         return "" if spec == pattern else None
     prefix, suffix = pattern.split("*", 1)
-    if (
-        spec.startswith(prefix)
-        and spec.endswith(suffix)
-        and len(spec) >= len(prefix) + len(suffix)
-    ):
+    if spec.startswith(prefix) and spec.endswith(suffix) and len(spec) >= len(prefix) + len(suffix):
         if suffix:
             return spec[len(prefix) : -len(suffix)]
         return spec[len(prefix) :]

@@ -124,3 +124,105 @@ def test_settings_raises_on_malformed_token_encryption_key():
             TOKEN_ENCRYPTION_KEY="not-a-valid-fernet-key",
         )
     assert "TOKEN_ENCRYPTION_KEY" in str(exc_info.value)
+
+
+def test_settings_groq_defaults_and_validation():
+    # Fast model defaults to GROQ_MODEL
+    s = Settings(
+        APP_SECRET_KEY="a" * 32,
+        FRONTEND_URL="http://localhost:5173",
+        BACKEND_URL="http://localhost:8000",
+        DATABASE_URL="sqlite:///./test.db",
+        GITHUB_CLIENT_ID="gh_client_id_123",
+        GITHUB_CLIENT_SECRET="gh_client_secret_456",
+        TOKEN_ENCRYPTION_KEY=VALID_FERNET_KEY,
+        GROQ_API_KEY="gsk_test_key_1234567890",
+        GROQ_MODEL="test-model",
+        GROQ_FAST_MODEL=None,
+        LLM_MAX_CONCURRENCY=5,
+        LANGSMITH_TRACING=False,
+    )
+    assert s.GROQ_MODEL == "test-model"
+    assert s.GROQ_FAST_MODEL == "test-model"
+    assert s.LLM_MAX_CONCURRENCY == 5
+    assert s.LLM_TIMEOUT_SECONDS == 60.0
+
+
+def test_settings_concurrency_out_of_bounds():
+    for invalid_c in [0, 11, -1]:
+        with pytest.raises(ValidationError) as exc_info:
+            Settings(
+                APP_SECRET_KEY="a" * 32,
+                FRONTEND_URL="http://localhost:5173",
+                BACKEND_URL="http://localhost:8000",
+                DATABASE_URL="sqlite:///./test.db",
+                GITHUB_CLIENT_ID="gh_client_id_123",
+                GITHUB_CLIENT_SECRET="gh_client_secret_456",
+                TOKEN_ENCRYPTION_KEY=VALID_FERNET_KEY,
+                GROQ_API_KEY="gsk_test_key_1234567890",
+                GROQ_MODEL="test-model",
+                LLM_MAX_CONCURRENCY=invalid_c,
+            )
+        assert "LLM_MAX_CONCURRENCY" in str(exc_info.value)
+
+
+def test_settings_tracing_on_without_key_fails():
+    with pytest.raises(ValidationError) as exc_info:
+        Settings(
+            APP_SECRET_KEY="a" * 32,
+            FRONTEND_URL="http://localhost:5173",
+            BACKEND_URL="http://localhost:8000",
+            DATABASE_URL="sqlite:///./test.db",
+            GITHUB_CLIENT_ID="gh_client_id_123",
+            GITHUB_CLIENT_SECRET="gh_client_secret_456",
+            TOKEN_ENCRYPTION_KEY=VALID_FERNET_KEY,
+            GROQ_API_KEY="gsk_test_key_1234567890",
+            GROQ_MODEL="test-model",
+            LANGSMITH_TRACING=True,
+            LANGSMITH_API_KEY=None,
+        )
+    assert "LANGSMITH_API_KEY" in str(exc_info.value)
+
+
+def test_export_langsmith_env(monkeypatch):
+    import os
+
+    from app.config import export_langsmith_env
+
+    # 1. Tracing disabled
+    s_off = Settings(
+        APP_SECRET_KEY="a" * 32,
+        FRONTEND_URL="http://localhost:5173",
+        BACKEND_URL="http://localhost:8000",
+        DATABASE_URL="sqlite:///./test.db",
+        GITHUB_CLIENT_ID="gh_client_id_123",
+        GITHUB_CLIENT_SECRET="gh_client_secret_456",
+        TOKEN_ENCRYPTION_KEY=VALID_FERNET_KEY,
+        GROQ_API_KEY="gsk_test_key_1234567890",
+        GROQ_MODEL="test-model",
+        LANGSMITH_TRACING=False,
+    )
+    export_langsmith_env(s_off)
+    assert os.environ["LANGSMITH_TRACING"] == "false"
+
+    # 2. Tracing enabled
+    s_on = Settings(
+        APP_SECRET_KEY="a" * 32,
+        FRONTEND_URL="http://localhost:5173",
+        BACKEND_URL="http://localhost:8000",
+        DATABASE_URL="sqlite:///./test.db",
+        GITHUB_CLIENT_ID="gh_client_id_123",
+        GITHUB_CLIENT_SECRET="gh_client_secret_456",
+        TOKEN_ENCRYPTION_KEY=VALID_FERNET_KEY,
+        GROQ_API_KEY="gsk_test_key_1234567890",
+        GROQ_MODEL="test-model",
+        LANGSMITH_TRACING=True,
+        LANGSMITH_API_KEY="lsv2_test_api_key_12345",
+        LANGSMITH_PROJECT="bodhcode-test",
+        LANGSMITH_ENDPOINT="https://api.smith.langchain.com",
+    )
+    export_langsmith_env(s_on)
+    assert os.environ["LANGSMITH_TRACING"] == "true"
+    assert os.environ["LANGSMITH_API_KEY"] == "lsv2_test_api_key_12345"
+    assert os.environ["LANGSMITH_PROJECT"] == "bodhcode-test"
+    assert os.environ["LANGSMITH_ENDPOINT"] == "https://api.smith.langchain.com"

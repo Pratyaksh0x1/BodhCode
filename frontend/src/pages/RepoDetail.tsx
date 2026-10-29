@@ -1,9 +1,22 @@
+import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { useRepo } from "../lib/repos";
+import { useMe } from "../lib/auth";
+import { useAnalyzeRepo, useRepo, useRepoGraph } from "../lib/repos";
+import { RepoCanvas } from "../components/canvas/RepoCanvas";
+import { ReadmeTab } from "../components/content/ReadmeTab";
+import { IssuesTab } from "../components/content/IssuesTab";
+import { PullRequestsTab } from "../components/content/PullRequestsTab";
 
 export function RepoDetail() {
   const { id } = useParams<{ id: string }>();
   const { data: repo, isLoading, isError, error } = useRepo(id);
+  const analyzeMutation = useAnalyzeRepo();
+
+  const { data: user } = useMe();
+  const [activeTab, setActiveTab] = useState<"map" | "readme" | "issues" | "prs">("map");
+
+  const isReady = repo?.status === "ready";
+  const { data: graph, isLoading: isGraphLoading } = useRepoGraph(repo?.id, isReady);
 
   if (isLoading) {
     return (
@@ -17,7 +30,10 @@ export function RepoDetail() {
   if (isError || !repo) {
     return (
       <div className="space-y-4">
-        <Link to="/" className="text-sm text-orange-400 hover:text-orange-300 inline-flex items-center gap-1.5">
+        <Link
+          to="/"
+          className="text-sm text-orange-400 hover:text-orange-300 inline-flex items-center gap-1.5"
+        >
           &larr; Back to repositories
         </Link>
         <div className="p-6 rounded-2xl bg-rose-950/30 border border-rose-900/50 text-rose-300 space-y-2">
@@ -27,6 +43,21 @@ export function RepoDetail() {
       </div>
     );
   }
+
+  const getStatusBadgeClass = () => {
+    switch (repo.status) {
+      case "ready":
+        return "bg-emerald-950 text-emerald-300 border-emerald-800";
+      case "analyzing":
+        return "bg-violet-950 text-violet-300 border-violet-800 animate-pulse";
+      case "fetched":
+        return "bg-sky-950 text-sky-300 border-sky-800";
+      case "failed":
+        return "bg-rose-950 text-rose-300 border-rose-800";
+      default:
+        return "bg-amber-950 text-amber-300 border-amber-800";
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -60,17 +91,36 @@ export function RepoDetail() {
         </div>
 
         <div className="flex items-center gap-3">
-          <span
-            className={`px-3 py-1 rounded-full text-xs font-medium border ${
-              repo.status === "fetched"
-                ? "bg-emerald-950 text-emerald-300 border-emerald-800"
-                : repo.status === "failed"
-                ? "bg-rose-950 text-rose-300 border-rose-800"
-                : "bg-sky-950 text-sky-300 border-sky-800"
-            }`}
-          >
+          <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusBadgeClass()}`}>
             {repo.status.toUpperCase()}
           </span>
+
+          {repo.status === "fetched" && (
+            <button
+              onClick={() => analyzeMutation.mutate(repo.id)}
+              disabled={analyzeMutation.isPending}
+              className="px-4 py-1.5 rounded-lg text-xs font-semibold bg-orange-500 hover:bg-orange-400 text-white transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {analyzeMutation.isPending ? (
+                <>
+                  <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>Starting...</span>
+                </>
+              ) : (
+                <span>Analyze</span>
+              )}
+            </button>
+          )}
+
+          {repo.status === "ready" && (
+            <button
+              onClick={() => analyzeMutation.mutate(repo.id)}
+              disabled={analyzeMutation.isPending}
+              className="px-3 py-1 rounded-lg text-xs font-medium border border-neutral-700 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 transition-colors cursor-pointer disabled:opacity-60"
+            >
+              Re-analyze
+            </button>
+          )}
         </div>
       </div>
 
@@ -87,23 +137,45 @@ export function RepoDetail() {
         </div>
       )}
 
-      {/* Ingestion Failed State */}
-      {repo.status === "failed" && (
-        <div className="p-6 rounded-2xl border border-rose-900/50 bg-rose-950/20 space-y-3">
-          <h2 className="text-base font-semibold text-rose-200">Repository Ingestion Failed</h2>
-          <p className="text-sm text-rose-300 font-mono bg-black/40 p-3 rounded border border-rose-900/30">
-            {repo.error_message || "An unknown error occurred during ingestion."}
+      {/* Analyzing In Progress State */}
+      {repo.status === "analyzing" && (
+        <div className="p-12 rounded-2xl border border-violet-900/40 bg-violet-950/20 text-center space-y-4">
+          <div className="w-10 h-10 border-3 border-violet-400 border-t-transparent rounded-full animate-spin mx-auto" />
+          <h2 className="text-lg font-semibold text-slate-100">
+            Analyzing repository dependencies...
+          </h2>
+          <p className="text-sm text-slate-400 max-w-md mx-auto">
+            Parsing TypeScript/JavaScript ASTs with tree-sitter, mapping module imports, and computing blast radius impacts.
           </p>
-          <Link
-            to="/"
-            className="inline-block text-xs font-medium px-3 py-1.5 rounded bg-rose-900/40 hover:bg-rose-800/40 border border-rose-700/50 text-rose-200 transition-colors"
-          >
-            Return to Dashboard
-          </Link>
         </div>
       )}
 
-      {/* Ingestion Fetched Success State */}
+      {/* Ingestion/Analysis Failed State */}
+      {repo.status === "failed" && (
+        <div className="p-6 rounded-2xl border border-rose-900/50 bg-rose-950/20 space-y-3">
+          <h2 className="text-base font-semibold text-rose-200">Repository Processing Failed</h2>
+          <p className="text-sm text-rose-300 font-mono bg-black/40 p-3 rounded border border-rose-900/30">
+            {repo.error_message || "An error occurred during repository ingestion or analysis."}
+          </p>
+          <div className="flex items-center gap-3 pt-2">
+            <button
+              onClick={() => analyzeMutation.mutate(repo.id)}
+              disabled={analyzeMutation.isPending}
+              className="inline-block text-xs font-medium px-3 py-1.5 rounded bg-rose-900/40 hover:bg-rose-800/40 border border-rose-700/50 text-rose-200 transition-colors cursor-pointer"
+            >
+              Retry Analysis
+            </button>
+            <Link
+              to="/"
+              className="inline-block text-xs font-medium px-3 py-1.5 rounded bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-neutral-300 transition-colors"
+            >
+              Return to Dashboard
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* Fetched State (Ready for Analysis) */}
       {repo.status === "fetched" && (
         <div className="space-y-6">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -124,22 +196,128 @@ export function RepoDetail() {
               </span>
             </div>
             <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/40">
-              <span className="text-xs text-slate-500 block mb-1">Status</span>
-              <span className="text-sm font-bold font-mono text-emerald-400">READY</span>
+              <span className="text-xs text-slate-500 block mb-1">Ingestion</span>
+              <span className="text-sm font-bold font-mono text-emerald-400">COMPLETE</span>
             </div>
           </div>
 
-          <div className="p-12 rounded-2xl border border-slate-800 bg-slate-900/30 text-center space-y-3">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-slate-800 bg-slate-900 text-xs font-mono text-slate-400">
-              <span>Phase 4 Workspace Target</span>
+          <div className="p-8 rounded-2xl border border-orange-900/40 bg-orange-950/20 text-center space-y-4">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-orange-800/50 bg-orange-900/30 text-xs font-mono text-orange-300">
+              <span>Ready for Analysis</span>
             </div>
             <h3 className="text-lg font-semibold text-slate-200">
-              Dependency Graph &amp; AST Blast Radius Visualizer
+              Build Dependency Graph &amp; Blast Radius
             </h3>
             <p className="text-sm text-slate-400 max-w-lg mx-auto">
-              Tree-sitter AST extraction, symbol dependency mapping, and React Flow visualizer will be activated here in Phase 4.
+              Extract semantic import/export facts, detect dependency cycles, and compute blast radius for each source file.
             </p>
+            <button
+              onClick={() => analyzeMutation.mutate(repo.id)}
+              disabled={analyzeMutation.isPending}
+              className="px-6 py-2.5 rounded-xl font-semibold text-sm bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-white shadow-lg shadow-orange-950/40 transition-all cursor-pointer inline-flex items-center gap-2 disabled:opacity-60"
+            >
+              {analyzeMutation.isPending ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>Starting Analysis...</span>
+                </>
+              ) : (
+                <>
+                  <span>Analyze Repository</span>
+                  <span>&rarr;</span>
+                </>
+              )}
+            </button>
           </div>
+        </div>
+      )}
+
+      {/* Ready State: Shows Canonical Graph Canvas with Tabs */}
+      {repo.status === "ready" && (
+        <div className="space-y-4">
+          {/* Tabs Scaffold */}
+          <div className="flex items-center gap-1 border-b border-neutral-200 dark:border-neutral-800 text-xs">
+            <button
+              type="button"
+              onClick={() => setActiveTab("map")}
+              aria-selected={activeTab === "map"}
+              className={`px-4 py-2 font-semibold border-b-2 flex items-center gap-2 transition-colors cursor-pointer ${
+                activeTab === "map"
+                  ? "border-orange-500 text-orange-500 dark:text-orange-400"
+                  : "border-transparent text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
+              }`}
+            >
+              <span>Map</span>
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-orange-500/10 text-orange-500 dark:text-orange-400 font-mono">
+                Interactive
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab("readme")}
+              aria-selected={activeTab === "readme"}
+              className={`px-4 py-2 font-semibold border-b-2 flex items-center gap-2 transition-colors cursor-pointer ${
+                activeTab === "readme"
+                  ? "border-orange-500 text-orange-500 dark:text-orange-400"
+                  : "border-transparent text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
+              }`}
+            >
+              <span>README</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab("issues")}
+              aria-selected={activeTab === "issues"}
+              className={`px-4 py-2 font-semibold border-b-2 flex items-center gap-2 transition-colors cursor-pointer ${
+                activeTab === "issues"
+                  ? "border-orange-500 text-orange-500 dark:text-orange-400"
+                  : "border-transparent text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
+              }`}
+            >
+              <span>Issues</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab("prs")}
+              aria-selected={activeTab === "prs"}
+              className={`px-4 py-2 font-semibold border-b-2 flex items-center gap-2 transition-colors cursor-pointer ${
+                activeTab === "prs"
+                  ? "border-orange-500 text-orange-500 dark:text-orange-400"
+                  : "border-transparent text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
+              }`}
+            >
+              <span>Pull Requests</span>
+            </button>
+          </div>
+
+          {/* Active Tab Content */}
+          {activeTab === "map" && (
+            <div>
+              {isGraphLoading || !graph ? (
+                <div className="py-24 flex flex-col items-center justify-center gap-3 text-neutral-400 rounded-2xl border border-neutral-800 bg-neutral-900/30">
+                  <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+                  <p className="text-sm">Loading repository dependency graph...</p>
+                </div>
+              ) : (
+                <RepoCanvas repoId={repo.id} graph={graph} repoStatus={repo.status} />
+              )}
+            </div>
+          )}
+
+          {activeTab === "readme" && (
+            <ReadmeTab repoId={repo.id} preferredLanguage={user?.preferred_language} />
+          )}
+
+          {activeTab === "issues" && (
+            <IssuesTab repoId={repo.id} preferredLanguage={user?.preferred_language} />
+          )}
+
+          {activeTab === "prs" && (
+            <PullRequestsTab repoId={repo.id} preferredLanguage={user?.preferred_language} />
+          )}
         </div>
       )}
     </div>

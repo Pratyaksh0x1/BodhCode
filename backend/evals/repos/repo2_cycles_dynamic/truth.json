@@ -1,0 +1,70 @@
+{
+  "nodes": [
+    "src/lazy_worker.ts",
+    "src/legacy.js",
+    "src/main.ts",
+    "src/services/auth.ts",
+    "src/services/session.ts"
+  ],
+  "edges": [
+    {
+      "source": "src/main.ts",
+      "target": "src/lazy_worker.ts",
+      "kind": "dynamic"
+    },
+    {
+      "source": "src/main.ts",
+      "target": "src/legacy.js",
+      "kind": "require"
+    },
+    {
+      "source": "src/main.ts",
+      "target": "src/services/auth.ts",
+      "kind": "import"
+    },
+    {
+      "source": "src/services/auth.ts",
+      "target": "src/services/session.ts",
+      "kind": "import"
+    },
+    {
+      "source": "src/services/session.ts",
+      "target": "src/services/auth.ts",
+      "kind": "import"
+    }
+  ],
+  "cycles": [
+    [
+      "src/services/auth.ts",
+      "src/services/session.ts"
+    ]
+  ],
+  "blast_radius": {
+    "src/services/auth.ts": [
+      {
+        "file": "src/main.ts",
+        "depth": 1
+      },
+      {
+        "file": "src/services/session.ts",
+        "depth": 1
+      }
+    ],
+    "src/services/session.ts": [
+      {
+        "file": "src/services/auth.ts",
+        "depth": 1
+      },
+      {
+        "file": "src/main.ts",
+        "depth": 2
+      }
+    ],
+    "src/lazy_worker.ts": [
+      {
+        "file": "src/main.ts",
+        "depth": 1
+      }
+    ]
+  }
+}
