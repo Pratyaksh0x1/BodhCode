@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Component, useState, type ErrorInfo, type ReactNode } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useMe } from "../lib/auth";
 import { useAnalyzeRepo, useRepo, useRepoGraph } from "../lib/repos";
@@ -6,6 +6,53 @@ import { RepoCanvas } from "../components/canvas/RepoCanvas";
 import { ReadmeTab } from "../components/content/ReadmeTab";
 import { IssuesTab } from "../components/content/IssuesTab";
 import { PullRequestsTab } from "../components/content/PullRequestsTab";
+
+interface ErrorBoundaryProps {
+  children: ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class CanvasErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error("Canvas render error:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-8 rounded-2xl border border-rose-900/50 bg-rose-950/20 text-rose-300 space-y-3">
+          <h3 className="text-base font-semibold text-rose-200">
+            Failed to render dependency map
+          </h3>
+          <p className="text-xs font-mono bg-black/40 p-3 rounded border border-rose-900/30">
+            {this.state.error?.message || "An unexpected error occurred while rendering the canvas."}
+          </p>
+          <button
+            type="button"
+            onClick={() => this.setState({ hasError: false, error: null })}
+            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-900/40 hover:bg-rose-800/40 border border-rose-700/50 text-rose-200 cursor-pointer"
+          >
+            Retry Render
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export function RepoDetail() {
   const { id } = useParams<{ id: string }>();
@@ -113,13 +160,23 @@ export function RepoDetail() {
           )}
 
           {repo.status === "ready" && (
-            <button
-              onClick={() => analyzeMutation.mutate(repo.id)}
-              disabled={analyzeMutation.isPending}
-              className="px-3 py-1 rounded-lg text-xs font-medium border border-neutral-700 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 transition-colors cursor-pointer disabled:opacity-60"
-            >
-              Re-analyze
-            </button>
+            <>
+              <Link
+                to={`/repos/${repo.id}/editor`}
+                id="open-editor-header-btn"
+                className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-white shadow-md flex items-center gap-1.5 transition-all hover:scale-105 active:scale-95"
+              >
+                <span>💻</span>
+                <span>Open in VS Code Studio</span>
+              </Link>
+              <button
+                onClick={() => analyzeMutation.mutate(repo.id)}
+                disabled={analyzeMutation.isPending}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium border border-neutral-700 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 transition-colors cursor-pointer disabled:opacity-60"
+              >
+                Re-analyze
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -302,7 +359,9 @@ export function RepoDetail() {
                   <p className="text-sm">Loading repository dependency graph...</p>
                 </div>
               ) : (
-                <RepoCanvas repoId={repo.id} graph={graph} repoStatus={repo.status} />
+                <CanvasErrorBoundary>
+                  <RepoCanvas repoId={repo.id} graph={graph} repoStatus={repo.status} />
+                </CanvasErrorBoundary>
               )}
             </div>
           )}

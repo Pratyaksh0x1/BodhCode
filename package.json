@@ -2,7 +2,9 @@
   "name": "bodhcode",
   "private": true,
   "scripts": {
-    "build": "neon config plan"
+    "build": "neon config plan",
+    "desktop": "pnpm --prefix frontend desktop",
+    "studio": "pnpm --prefix frontend desktop"
   },
   "dependencies": {
     "@neon/config": "^1.9.4",

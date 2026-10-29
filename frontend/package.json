@@ -9,7 +9,8 @@
     "lint": "node --max-old-space-size=4096 ./node_modules/eslint/bin/eslint.js .",
     "test": "vitest run",
     "format": "prettier --check .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "desktop": "electron ./electron/main.cjs"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
@@ -34,6 +35,7 @@
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^6.1.2",
+    "electron": "^45.1.0",
     "eslint": "^10.13.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.7",

@@ -51,6 +51,8 @@ function RepoCanvasInner({ repoId, graph, repoStatus }: RepoCanvasInnerProps) {
   const select = useGraphStore((s) => s.select);
   const clearBlast = useGraphStore((s) => s.clearBlast);
   const selectedFileId = useGraphStore((s) => s.selectedFileId);
+  const isChatOpen = useGraphStore((s) => s.isChatOpen);
+  const setChatOpen = useGraphStore((s) => s.setChatOpen);
 
   // Initialize auto-expanded folders on mount or repo change
   useEffect(() => {
@@ -119,7 +121,7 @@ function RepoCanvasInner({ repoId, graph, repoStatus }: RepoCanvasInnerProps) {
     // Compute fan-in / fan-out map from raw graph edges
     const fanInMap = new Map<string, number>();
     const fanOutMap = new Map<string, number>();
-    for (const edge of graph.edges) {
+    for (const edge of (graph.edges ?? [])) {
       fanOutMap.set(edge.source, (fanOutMap.get(edge.source) || 0) + 1);
       fanInMap.set(edge.target, (fanInMap.get(edge.target) || 0) + 1);
     }
@@ -216,6 +218,20 @@ function RepoCanvasInner({ repoId, graph, repoStatus }: RepoCanvasInnerProps) {
 
       {/* Side Panel for Selected File */}
       {selectedFileId && <SidePanel repoId={repoId} />}
+
+      {/* Floating Ask AI Button (visible when chat is closed) */}
+      {!isChatOpen && (
+        <button
+          type="button"
+          id="floating-ask-ai-btn"
+          onClick={() => setChatOpen(true)}
+          className="absolute bottom-6 right-6 z-30 px-4 py-2.5 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-white font-bold text-xs shadow-2xl flex items-center gap-2 cursor-pointer transition-all hover:scale-105 active:scale-95"
+          title="Ask questions about this repository's architecture and dependencies"
+        >
+          <span className="text-sm">💬</span>
+          <span>Ask AI Architecture Question</span>
+        </button>
+      )}
 
       {/* AI Chat Drawer */}
       <ChatDrawer repoId={repoId} repoStatus={repoStatus} />

@@ -374,13 +374,26 @@ function RepoCard({
 
         <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
           {isReady && (
-            <Link
-              to={`/repos/${repo.id}`}
-              id={`open-repo-${repo.id}`}
-              className="px-3 py-1 rounded-md bg-orange-500 hover:bg-orange-600 text-white font-medium transition-colors shadow-sm"
-            >
-              Open
-            </Link>
+            <>
+              <Link
+                to={`/repos/${repo.id}/editor`}
+                id={`open-editor-${repo.id}`}
+                className="px-3 py-1 rounded-md bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-white font-semibold transition-all shadow-sm flex items-center gap-1.5"
+                title="Open in BodhCode VS Code Studio"
+              >
+                <span>💻</span>
+                <span>Open Studio Editor</span>
+              </Link>
+              <Link
+                to={`/repos/${repo.id}`}
+                id={`open-map-${repo.id}`}
+                className="px-2.5 py-1 rounded-md border border-neutral-700 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-medium transition-colors"
+                title="View Dependency Map Canvas"
+              >
+                <span>🗺️</span>
+                <span>Map</span>
+              </Link>
+            </>
           )}
 
           <button

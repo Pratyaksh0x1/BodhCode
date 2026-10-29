@@ -20,13 +20,17 @@ export const TopBar = memo(function TopBar() {
       {/* Left: Repo info & Commit */}
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-1.5 font-semibold text-sm">
-          <span className="text-neutral-500 dark:text-neutral-400">
-            {graph.repo.owner}/
-          </span>
-          <span className="text-orange-500 font-bold">{graph.repo.name}</span>
+          {graph.repo?.owner && (
+            <span className="text-neutral-500 dark:text-neutral-400">
+              {graph.repo.owner}/
+            </span>
+          )}
+          {graph.repo?.name && (
+            <span className="text-orange-500 font-bold">{graph.repo.name}</span>
+          )}
         </div>
 
-        {graph.repo.commit_sha && (
+        {graph.repo?.commit_sha && (
           <span
             className="px-2 py-0.5 rounded-md font-mono text-[11px] bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700"
             title={`Commit ${graph.repo.commit_sha}`}
@@ -42,26 +46,26 @@ export const TopBar = memo(function TopBar() {
           className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
           title="Total analyzed source files"
         >
-          <strong>{graph.stats.files}</strong> files
+          <strong>{graph.stats?.files ?? 0}</strong> files
         </span>
         <span
           className="px-2 py-0.5 rounded-full bg-sky-100 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800"
           title="Dependency import edges"
         >
-          <strong>{graph.stats.edges}</strong> edges
+          <strong>{graph.stats?.edges ?? 0}</strong> edges
         </span>
         <span
           className="px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800"
           title="External npm packages referenced"
         >
-          <strong>{graph.stats.external_packages}</strong> pkgs
+          <strong>{graph.stats?.external_packages ?? 0}</strong> pkgs
         </span>
-        {graph.stats.cycles > 0 && (
+        {(graph.stats?.cycles ?? 0) > 0 && (
           <span
             className="px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 font-bold"
             title="Circular dependency loops detected"
           >
-            ⚠️ <strong>{graph.stats.cycles}</strong> cycles
+            ⚠️ <strong>{graph.stats?.cycles}</strong> cycles
           </span>
         )}
       </div>
@@ -104,7 +108,7 @@ export const TopBar = memo(function TopBar() {
           }`}
         >
           <span>💬</span>
-          <span>Chat</span>
+          <span>Ask AI Chat</span>
         </button>
       </div>
     </div>

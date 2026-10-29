@@ -79,9 +79,10 @@ export function representativeOf(path: string, expandedFolders: Set<string>): st
  */
 export function visibleNodes(graph: GraphDoc, expandedFolders: Set<string>): VisibleNode[] {
   const repMap = new Map<string, VisibleNode>();
-  const foldersById = new Map(graph.folders.map((f) => [f.id, f]));
+  const folders = graph.folders ?? [];
+  const foldersById = new Map(folders.map((f) => [f.id, f]));
 
-  for (const node of graph.nodes) {
+  for (const node of graph.nodes ?? []) {
     const repId = representativeOf(node.id, expandedFolders);
     if (repMap.has(repId)) {
       continue;
@@ -149,7 +150,7 @@ export function visibleEdges(
 
   const merged = new Map<string, MergedEdgeAcc>();
 
-  for (const edge of graph.edges) {
+  for (const edge of graph.edges ?? []) {
     // 1. Kind filter
     if (edgeKindsVisible && edgeKindsVisible[edge.kind] === false) {
       continue;
@@ -209,7 +210,8 @@ export function visibleEdges(
  * Otherwise, expand nothing (top-level folders remain collapsed as nodes).
  */
 export function initialExpanded(graph: GraphDoc): Set<string> {
-  const topLevelFolders = graph.folders.filter((f) => !f.parent || f.parent === "");
+  const folders = graph.folders ?? [];
+  const topLevelFolders = folders.filter((f) => !f.parent || f.parent === "");
   if (topLevelFolders.length === 1) {
     return new Set([topLevelFolders[0].id]);
   }
@@ -242,7 +244,8 @@ export function canExpandAll(
   graph: GraphDoc,
   maxNodes: number = MAX_VISIBLE_NODES
 ): boolean {
-  const allFolders = new Set(graph.folders.map((f) => f.id));
+  const folders = graph.folders ?? [];
+  const allFolders = new Set(folders.map((f) => f.id));
   const projectedCount = visibleNodes(graph, allFolders).length;
   return projectedCount <= maxNodes;
 }
