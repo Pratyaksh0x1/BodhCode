@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -10,7 +11,7 @@
     "test": "vitest run",
     "format": "prettier --check .",
     "preview": "vite preview",
-    "desktop": "electron ./electron/main.cjs"
+    "desktop": "node ./electron/launch.cjs"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
