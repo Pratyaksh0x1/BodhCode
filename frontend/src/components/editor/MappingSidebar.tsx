@@ -161,11 +161,14 @@ export function MappingSidebar({
                       {fileDeps.dependencies.length === 0 ? (
                         <span className="text-neutral-600">None</span>
                       ) : (
-                        fileDeps.dependencies.map((dep) => (
-                          <div key={dep} className="truncate" title={dep}>
-                            &rarr; {dep}
-                          </div>
-                        ))
+                        fileDeps.dependencies.map((dep) => {
+                          const depFile = typeof dep === "string" ? dep : dep.file;
+                          return (
+                            <div key={depFile} className="truncate" title={depFile}>
+                              &rarr; {depFile}
+                            </div>
+                          );
+                        })
                       )}
                     </div>
                   </div>
@@ -178,11 +181,14 @@ export function MappingSidebar({
                       {fileDeps.dependents.length === 0 ? (
                         <span className="text-neutral-600">None</span>
                       ) : (
-                        fileDeps.dependents.map((dep) => (
-                          <div key={dep} className="truncate text-emerald-400/90" title={dep}>
-                            &larr; {dep}
-                          </div>
-                        ))
+                        fileDeps.dependents.map((dep) => {
+                          const depFile = typeof dep === "string" ? dep : dep.file;
+                          return (
+                            <div key={depFile} className="truncate text-emerald-400/90" title={depFile}>
+                              &larr; {depFile}
+                            </div>
+                          );
+                        })
                       )}
                     </div>
                   </div>
@@ -228,3 +234,4 @@ export function MappingSidebar({
     </div>
   );
 }
+

@@ -143,3 +143,4 @@ export function RunSidebar({ repoId, onExecuteCommand }: RunSidebarProps) {
     </div>
   );
 }
+

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useMe } from "../lib/auth";
 import { VITE_API_URL } from "../lib/env";
-import { useCreateRepo, useDeleteRepo, useRefreshRepo, useRepos, validateRepoUrl, type Repo } from "../lib/repos";
+import { useCreateLocalWorkspace, useCreateRepo, useDeleteRepo, useRefreshRepo, useRepos, validateRepoUrl, type Repo } from "../lib/repos";
 
 function formatRelativeTime(isoString: string): string {
   try {
@@ -28,7 +28,16 @@ export function Home() {
   const createRepo = useCreateRepo();
   const refreshRepo = useRefreshRepo();
   const deleteRepo = useDeleteRepo();
+  const createLocalWorkspace = useCreateLocalWorkspace();
   const navigate = useNavigate();
+
+  const handleCreateNewProject = () => {
+    createLocalWorkspace.mutate(undefined, {
+      onSuccess: (newRepo) => {
+        navigate(`/repos/${newRepo.id}/editor`);
+      },
+    });
+  };
 
   const [inputUrl, setInputUrl] = useState("");
   const [clientValidationError, setClientValidationError] = useState<string | null>(null);
@@ -156,6 +165,45 @@ export function Home() {
   // Signed-in Dashboard
   return (
     <div className="space-y-10">
+      {/* Studio Quick Launch Hero Card */}
+      <section className="p-6 rounded-2xl bg-gradient-to-r from-orange-500/15 via-amber-500/10 to-neutral-900/40 border border-orange-500/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-5 shadow-xl">
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2">
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono uppercase bg-orange-500/20 text-orange-400 border border-orange-500/40">
+              ⚡ Unified AI IDE Studio
+            </span>
+            <span className="text-xs text-neutral-400 font-mono">VS Code OSS &bull; Codex &bull; AST Topology</span>
+          </div>
+          <h2 className="text-2xl font-bold tracking-tight text-neutral-100">
+            Open Code Editor &amp; AI Studio
+          </h2>
+          <p className="text-sm text-neutral-300 max-w-xl leading-relaxed">
+            Create files, run CLI terminal commands, edit with Monaco, and build projects powered by ChatGPT and Copilot AI agents.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3 shrink-0">
+          <Link
+            to="/editor"
+            id="hero-open-editor-btn"
+            className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-white shadow-lg shadow-orange-500/30 flex items-center gap-2 transition-all hover:scale-105 active:scale-95"
+          >
+            <span>💻</span>
+            <span>Open Code Editor</span>
+          </Link>
+          <button
+            type="button"
+            id="hero-new-project-btn"
+            onClick={handleCreateNewProject}
+            disabled={createLocalWorkspace.isPending}
+            className="px-4 py-2.5 rounded-xl text-sm font-medium border border-neutral-700 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
+          >
+            <span>✨</span>
+            <span>{createLocalWorkspace.isPending ? "Creating..." : "New Local Project"}</span>
+          </button>
+        </div>
+      </section>
+
       {/* Repo Input Section */}
       <section className="space-y-4">
         <div>

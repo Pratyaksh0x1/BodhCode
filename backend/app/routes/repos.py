@@ -1,3 +1,6 @@
+import re
+import uuid
+from pathlib import Path
 from typing import Annotated, Any
 
 from fastapi import (
@@ -9,9 +12,11 @@ from fastapi import (
     Response,
     status,
 )
+from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
 from app.auth.deps import get_current_user, require_csrf_header
+from app.config import get_settings
 from app.db import get_session
 from app.github.ingest import ingest_repo
 from app.github.urls import InvalidRepoUrl, parse_repo_url
@@ -87,6 +92,93 @@ async def create_repo(
     session.refresh(repo)
 
     background_tasks.add_task(ingest_repo, repo.id)  # type: ignore[arg-type]
+    return repo
+
+
+class LocalProjectCreate(BaseModel):
+    name: str = Field(default="my-project", min_length=1, max_length=100)
+    description: str | None = None
+
+
+@router.post(
+    "/local",
+    response_model=RepoRead,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_local_project(
+    payload: LocalProjectCreate,
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[Session, Depends(get_session)],
+) -> Repo:
+    """Create a local workspace project with starter files and deterministic graph."""
+    clean_name = re.sub(r"[^a-zA-Z0-9_.-]", "-", payload.name).strip("-") or "my-project"
+
+    statement = select(Repo).where(
+        Repo.user_id == current_user.id,
+        Repo.owner == current_user.login,
+        Repo.name == clean_name,
+    )
+    existing = session.exec(statement).first()
+    if existing is not None:
+        return existing
+
+    commit_sha = uuid.uuid4().hex[:12]
+    now = utc_now()
+    repo = Repo(
+        user_id=current_user.id,  # type: ignore[arg-type]
+        owner=current_user.login,
+        name=clean_name,
+        branch="main",
+        commit_sha=commit_sha,
+        status="fetched",
+        file_count=3,
+        created_at=now,
+        updated_at=now,
+    )
+    session.add(repo)
+    session.commit()
+    session.refresh(repo)
+
+    settings = get_settings()
+    src_dir = Path(settings.DATA_DIR) / "repos" / repo.owner / repo.name / commit_sha / "src"
+    src_sub = src_dir / "src"
+    src_sub.mkdir(parents=True, exist_ok=True)
+
+    readme_content = (
+        f"# {clean_name}\n\n"
+        "Local BodhCode project workspace.\n"
+        "Create files, edit code, run terminal commands, and use AI assistants.\n"
+    )
+    (src_dir / "README.md").write_text(readme_content, encoding="utf-8")
+
+    index_content = (
+        'import { greet } from "./utils";\n\n'
+        "export function main(): void {\n"
+        '  console.log(greet("BodhCode Developer"));\n'
+        "}\n\n"
+        "main();\n"
+    )
+    (src_sub / "index.ts").write_text(index_content, encoding="utf-8")
+
+    utils_content = (
+        "export function greet(name: string): string {\n"
+        "  return `Hello, ${name}! Welcome to BodhCode Studio.`;\n"
+        "}\n"
+    )
+    (src_sub / "utils.ts").write_text(utils_content, encoding="utf-8")
+
+    pkg_content = (
+        "{\n"
+        f'  "name": "{clean_name.lower()}",\n'
+        '  "version": "1.0.0",\n'
+        '  "description": "Local BodhCode workspace project",\n'
+        '  "main": "src/index.ts"\n'
+        "}\n"
+    )
+    (src_dir / "package.json").write_text(pkg_content, encoding="utf-8")
+
+    await analyze_repo(repo.id)  # type: ignore[arg-type]
+    session.refresh(repo)
     return repo
 
 

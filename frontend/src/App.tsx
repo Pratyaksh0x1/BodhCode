@@ -33,6 +33,14 @@ export function App() {
               </RequireAuth>
             }
           />
+          <Route
+            path="editor"
+            element={
+              <RequireAuth>
+                <EditorWorkspace />
+              </RequireAuth>
+            }
+          />
           <Route path="auth/desktop-success" element={<AuthDesktopSuccess />} />
           <Route path="/" element={<Layout />}>
             <Route index element={<Home />} />

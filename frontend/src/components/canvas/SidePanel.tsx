@@ -51,7 +51,7 @@ export const SidePanel = memo(function SidePanel({ repoId }: SidePanelProps) {
   const directDependents = useMemo(() => {
     if (!selectedFileId) return [];
     if (depsData?.dependents) {
-      return depsData.dependents;
+      return depsData.dependents.map((d) => (typeof d === "string" ? d : d.file));
     }
     const set = new Set<string>();
     for (const e of graph.edges) {
@@ -65,7 +65,7 @@ export const SidePanel = memo(function SidePanel({ repoId }: SidePanelProps) {
   const directDependencies = useMemo(() => {
     if (!selectedFileId) return [];
     if (depsData?.dependencies) {
-      return depsData.dependencies;
+      return depsData.dependencies.map((d) => (typeof d === "string" ? d : d.file));
     }
     const set = new Set<string>();
     for (const e of graph.edges) {

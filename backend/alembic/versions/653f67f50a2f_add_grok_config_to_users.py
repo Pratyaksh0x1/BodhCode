@@ -5,6 +5,7 @@ Revises: a5294b96c51d
 Create Date: 2026-10-29 15:38:54.574725
 
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -12,8 +13,8 @@ import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = '653f67f50a2f'
-down_revision: str | Sequence[str] | None = 'a5294b96c51d'
+revision: str = "653f67f50a2f"
+down_revision: str | Sequence[str] | None = "a5294b96c51d"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

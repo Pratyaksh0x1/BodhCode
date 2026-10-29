@@ -84,9 +84,7 @@ async def exec_terminal_command(
             env={**os.environ, "CI": "true", "TERM": "xterm-256color"},
         )
 
-        stdout_bytes, stderr_bytes = await asyncio.wait_for(
-            proc.communicate(), timeout=30.0
-        )
+        stdout_bytes, stderr_bytes = await asyncio.wait_for(proc.communicate(), timeout=30.0)
         duration_ms = (time.time() - start_time) * 1000
 
         return TerminalExecResponse(

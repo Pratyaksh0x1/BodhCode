@@ -83,24 +83,47 @@ export function Layout() {
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 flex flex-col font-sans transition-colors duration-150">
       <header className="border-b border-neutral-200 dark:border-neutral-800 bg-white/80 dark:bg-neutral-900/80 backdrop-blur px-6 py-4 flex items-center justify-between sticky top-0 z-50 transition-colors duration-150">
-        <div className="flex items-center gap-3">
-          <Link
-            to="/"
-            aria-label="BodhCode Home"
-            className="flex items-center gap-2.5 text-xl font-bold tracking-tight hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-orange-500/50 rounded-lg p-0.5"
-          >
-            <img
-              src="/logo.png"
-              alt="BodhCode Logo"
-              className="h-8 w-8 object-contain drop-shadow-[0_0_12px_rgba(249,115,22,0.35)] hover:scale-105 transition-transform"
-            />
-            <span className="bg-gradient-to-r from-orange-400 to-amber-300 bg-clip-text text-transparent font-bold tracking-tight">
-              BodhCode
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-3">
+            <Link
+              to="/"
+              aria-label="BodhCode Home"
+              className="flex items-center gap-2.5 text-xl font-bold tracking-tight hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-orange-500/50 rounded-lg p-0.5"
+            >
+              <img
+                src="/logo.png"
+                alt="BodhCode Logo"
+                className="h-8 w-8 object-contain drop-shadow-[0_0_12px_rgba(249,115,22,0.35)] hover:scale-105 transition-transform"
+              />
+              <span className="bg-gradient-to-r from-orange-400 to-amber-300 bg-clip-text text-transparent font-bold tracking-tight">
+                BodhCode
+              </span>
+            </Link>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 font-mono">
+              v0.1.0-alpha
             </span>
-          </Link>
-          <span className="text-xs px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 font-mono">
-            v0.1.0-alpha
-          </span>
+          </div>
+
+          {user && (
+            <nav className="hidden sm:flex items-center gap-1.5 text-xs font-medium">
+              <Link
+                to="/editor"
+                id="nav-editor-link"
+                className="px-3 py-1.5 rounded-lg bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/30 flex items-center gap-1.5 transition-colors"
+              >
+                <span>💻</span>
+                <span>Code Editor</span>
+              </Link>
+              <Link
+                to="/"
+                id="nav-repos-link"
+                className="px-3 py-1.5 rounded-lg text-neutral-400 hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors flex items-center gap-1.5"
+              >
+                <span>🗺️</span>
+                <span>Repositories</span>
+              </Link>
+            </nav>
+          )}
         </div>
 
         <div id="header-actions" className="flex items-center gap-3">

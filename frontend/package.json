@@ -8,7 +8,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "node --max-old-space-size=4096 ./node_modules/eslint/bin/eslint.js .",
-    "test": "vitest run",
+    "test": "node --max-old-space-size=4096 ./node_modules/vitest/vitest.mjs run --pool=forks --maxWorkers=2",
     "format": "prettier --check .",
     "preview": "vite preview",
     "desktop": "node ./electron/launch.cjs"

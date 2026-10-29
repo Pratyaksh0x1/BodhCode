@@ -82,8 +82,8 @@ export interface BlastResult {
 
 export interface FileDepsResult {
   file: string;
-  dependencies: string[];
-  dependents: string[];
+  dependencies: (string | BlastImpact)[];
+  dependents: (string | BlastImpact)[];
 }
 
 const GITHUB_NAME_REGEX = /^[a-zA-Z0-9_.-]+$/;
@@ -218,6 +218,24 @@ export function useCreateRepo() {
       api<Repo>("/repos", {
         method: "POST",
         body: JSON.stringify({ url }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: REPOS_QUERY_KEY });
+    },
+  });
+}
+
+export function useCreateLocalWorkspace() {
+  const queryClient = useQueryClient();
+
+  return useMutation<Repo, Error, { name?: string; description?: string } | void>({
+    mutationFn: (payload) =>
+      api<Repo>("/repos/local", {
+        method: "POST",
+        body: JSON.stringify({
+          name: payload?.name || "my-project",
+          description: payload?.description || "Local BodhCode project workspace",
+        }),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: REPOS_QUERY_KEY });

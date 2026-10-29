@@ -33,8 +33,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         session = request.scope.get("session")
         has_session_user = bool(session.get("user_id")) if isinstance(session, dict) else False
         is_authenticated_request = bool(
-            has_session_user
-            or request.url.path.startswith(("/repos", "/auth/me", "/proposals"))
+            has_session_user or request.url.path.startswith(("/repos", "/auth/me", "/proposals"))
         )
         if is_authenticated_request and "application/json" in content_type:
             if "cache-control" not in response.headers:

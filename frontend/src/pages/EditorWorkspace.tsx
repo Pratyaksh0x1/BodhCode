@@ -1,5 +1,6 @@
 import { useEffect, useReducer, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useCreateLocalWorkspace, useRepos } from "../lib/repos";
 import { Group, Panel, Separator, type Layout } from "react-resizable-panels";
 import { useMe } from "../lib/auth";
 import {
@@ -69,9 +70,29 @@ export function EditorWorkspace() {
   const { data: diffData, isLoading: isDiffLoading } = useFileDiff(id, diffPath);
 
   // Layout UI states
+  const navigate = useNavigate();
+  const { data: allRepos, isLoading: isAllReposLoading } = useRepos();
+  const createLocalWorkspace = useCreateLocalWorkspace();
+
+  // Redirect /editor to first available repo or auto-create a local workspace
+  useEffect(() => {
+    if (!id) {
+      if (allRepos && allRepos.length > 0) {
+        navigate(`/repos/${allRepos[0].id}/editor`, { replace: true });
+      } else if (!isAllReposLoading && !createLocalWorkspace.isPending) {
+        createLocalWorkspace.mutate(undefined, {
+          onSuccess: (newRepo) => {
+            navigate(`/repos/${newRepo.id}/editor`, { replace: true });
+          },
+        });
+      }
+    }
+  }, [id, allRepos, isAllReposLoading, navigate, createLocalWorkspace]);
+
+  // Layout UI states
   const [sidebarView, setSidebarView] = useState<SidebarView | null>("explorer");
   const [isBottomOpen, setIsBottomOpen] = useState(false);
-  const [isAiOpen, setIsAiOpen] = useState(false);
+  const [isAiOpen, setIsAiOpen] = useState(true);
   const [isQuickOpen, setIsQuickOpen] = useState(false);
   const [isPushModalOpen, setIsPushModalOpen] = useState(false);
   const [pendingSelection, setPendingSelection] = useState<PendingSelection | null>(null);
@@ -97,8 +118,11 @@ export function EditorWorkspace() {
         const parsed: unknown = JSON.parse(stored);
         if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
           const layout = parsed as Layout;
-          if (typeof layout.sidebar === "number" && layout.sidebar < 18) {
-            layout.sidebar = 22;
+          const values = Object.values(layout);
+          // If values are <= 100, react-resizable-panels v4 treats them as pixels, causing squished panels!
+          if (values.some((v) => typeof v === "number" && v < 100)) {
+            localStorage.removeItem("bodhcode.editor.layout.horizontal");
+            return undefined;
           }
           return layout;
         }
@@ -304,6 +328,16 @@ export function EditorWorkspace() {
     setIsBottomOpen(true);
   };
 
+  // Handle missing id: launching workspace
+  if (!id) {
+    return (
+      <div className="h-screen w-full flex flex-col items-center justify-center bg-neutral-950 text-neutral-300 gap-3">
+        <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+        <p className="text-sm font-medium">Launching BodhCode Studio Workspace...</p>
+      </div>
+    );
+  }
+
   // Loading and Error states
   if (isRepoLoading || isFilesLoading) {
     return (
@@ -444,10 +478,11 @@ export function EditorWorkspace() {
               <>
                 <Panel
                   id="sidebar"
-                  defaultSize={sidebarView === "browser" ? 40 : 22}
-                  minSize={18}
-                  maxSize={60}
+                  defaultSize={sidebarView === "browser" ? "45%" : "22%"}
+                  minSize="18%"
+                  maxSize="45%"
                 >
+                  <div className="h-full w-full min-w-[220px] flex flex-col overflow-hidden">
                   {sidebarView === "browser" ? (
                     <EmbeddedBrowser
                       onClose={() => setSidebarView(null)}
@@ -484,13 +519,14 @@ export function EditorWorkspace() {
                       onOpenDiff={handleOpenDiff}
                     />
                   )}
+                  </div>
                 </Panel>
                 <Separator className="w-1 bg-neutral-800 hover:bg-orange-500 transition-colors cursor-col-resize shrink-0" />
               </>
             )}
 
             {/* Center Area: Editor + Bottom Panel */}
-            <Panel id="center" minSize={30}>
+            <Panel id="center" minSize="30%">
               <Group
                 orientation="vertical"
                 defaultLayout={savedVerticalLayout}
@@ -503,7 +539,7 @@ export function EditorWorkspace() {
                 }}
               >
                 {/* Editor Tabs & Monaco Pane */}
-                <Panel id="editor" minSize={30}>
+                <Panel id="editor" minSize="30%">
                   <div className="h-full flex flex-col overflow-hidden bg-neutral-950">
                     <EditorTabs
                       tabs={tabState.tabs}
@@ -547,7 +583,7 @@ export function EditorWorkspace() {
                 {isBottomOpen && (
                   <>
                     <Separator className="h-1 bg-neutral-800 hover:bg-orange-500 transition-colors cursor-row-resize shrink-0" />
-                    <Panel id="bottom" defaultSize={30} minSize={15} maxSize={60}>
+                    <Panel id="bottom" defaultSize="30%" minSize="15%" maxSize="60%">
                       <BottomPanel
                         changes={changes}
                         activeDiffPath={diffPath}
@@ -570,8 +606,9 @@ export function EditorWorkspace() {
             {isAiOpen && repo && (
               <>
                 <Separator className="w-1 bg-neutral-800 hover:bg-orange-500 transition-colors cursor-col-resize shrink-0" />
-                <Panel id="ai" defaultSize={24} minSize={18} maxSize={45}>
-                  <AgentPanel
+                <Panel id="ai" defaultSize="28%" minSize="20%" maxSize="50%">
+                  <div className="h-full w-full min-w-[280px] flex flex-col overflow-hidden">
+                    <AgentPanel
                     repoId={repo.id}
                     activeFilePath={tabState.activePath}
                     pendingSelection={pendingSelection}
@@ -592,6 +629,7 @@ export function EditorWorkspace() {
                       queryClient.invalidateQueries({ queryKey: ["files", repo.id, "changes"] });
                     }}
                   />
+                  </div>
                 </Panel>
               </>
             )}
