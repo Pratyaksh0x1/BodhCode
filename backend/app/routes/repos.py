@@ -25,6 +25,7 @@ from app.parser.blast import (
     find_cycles,
 )
 from app.parser.graph import PARSER_VERSION
+from app.rate_limiter import rate_limit_repo_ingest
 from app.routes.graph_cache import get_cached_digraph
 from app.services.analyze import analyze_repo
 
@@ -35,7 +36,12 @@ router = APIRouter(
 )
 
 
-@router.post("", response_model=RepoRead, status_code=status.HTTP_202_ACCEPTED)
+@router.post(
+    "",
+    response_model=RepoRead,
+    status_code=status.HTTP_202_ACCEPTED,
+    dependencies=[Depends(rate_limit_repo_ingest)],
+)
 async def create_repo(
     payload: RepoCreate,
     current_user: Annotated[User, Depends(get_current_user)],
@@ -116,7 +122,11 @@ def get_repo(
     return repo
 
 
-@router.post("/{repo_id}/refresh", response_model=RepoRead)
+@router.post(
+    "/{repo_id}/refresh",
+    response_model=RepoRead,
+    dependencies=[Depends(rate_limit_repo_ingest)],
+)
 def refresh_repo(
     repo_id: int,
     current_user: Annotated[User, Depends(get_current_user)],

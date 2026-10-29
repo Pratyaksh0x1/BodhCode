@@ -9,8 +9,8 @@ describe("PushModalWizard", () => {
   });
 
   const mockChanges: ChangedFileItem[] = [
-    { path: "src/index.ts", status: "modified" },
-    { path: "src/utils.ts", status: "added" },
+    { path: "src/index.ts", status: "modified", size: 100, language_hint: "typescript" },
+    { path: "src/utils.ts", status: "added", size: 50, language_hint: "typescript" },
   ];
 
   it("renders changed files in review step", () => {
@@ -32,8 +32,8 @@ describe("PushModalWizard", () => {
 
   it("blocks next button if sensitive file (.env) is present", () => {
     const sensitiveChanges: ChangedFileItem[] = [
-      { path: ".env", status: "modified" },
-      { path: "src/index.ts", status: "modified" },
+      { path: ".env", status: "modified", size: 20, language_hint: "dotenv" },
+      { path: "src/index.ts", status: "modified", size: 100, language_hint: "typescript" },
     ];
 
     render(

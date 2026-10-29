@@ -11,7 +11,7 @@ from app.parser.types import FileFacts, ImportRef
 # Maximum file size for AST analysis: 1 MB
 MAX_SOURCE_BYTES = 1_000_000
 
-# Module-level lazy language cache
+# Module-level lazy language cache (immutable grammar definitions)
 _LANGUAGES: dict[str, Language] = {}
 
 
@@ -43,51 +43,65 @@ def _node_text(node: Node, source: bytes) -> str:
 def _extract_string_literal(node: Node, source: bytes) -> str | None:
     """Extract decoded string literal content without quotes, or None if non-literal / invalid."""
     if node.type == "string":
-        parts: list[str] = []
-        for child in node.children:
-            if child.type in ('"', "'"):
-                continue
-            if child.type == "string_fragment":
-                parts.append(_node_text(child, source))
-            elif child.type == "escape_sequence":
+        raw_bytes = source[node.start_byte : node.end_byte]
+        if len(raw_bytes) >= 2 and (
+            (raw_bytes.startswith(b'"') and raw_bytes.endswith(b'"'))
+            or (raw_bytes.startswith(b"'") and raw_bytes.endswith(b"'"))
+        ):
+            content = raw_bytes[1:-1]
+            if b"\\" in content:
                 try:
-                    decoded = codecs.decode(_node_bytes(child, source), "unicode_escape")
-                    parts.append(decoded)
+                    return codecs.decode(content, "unicode_escape")
                 except Exception:
-                    return None
-            else:
-                return None
-        return "".join(parts)
+                    return content.decode("utf-8", errors="replace")
+            return content.decode("utf-8", errors="replace")
+        return None
 
     if node.type == "template_string":
-        parts = []
-        for child in node.children:
-            if child.type == "`":
-                continue
-            if child.type == "string_fragment":
-                parts.append(_node_text(child, source))
-            elif child.type == "escape_sequence":
+        raw_bytes = source[node.start_byte : node.end_byte]
+        if b"${" in raw_bytes:
+            return None
+        if len(raw_bytes) >= 2 and raw_bytes.startswith(b"`") and raw_bytes.endswith(b"`"):
+            content = raw_bytes[1:-1]
+            if b"\\" in content:
                 try:
-                    decoded = codecs.decode(_node_bytes(child, source), "unicode_escape")
-                    parts.append(decoded)
+                    return codecs.decode(content, "unicode_escape")
                 except Exception:
-                    return None
-            elif child.type == "template_substitution":
-                # Template substitutions with ${...} are non-literal dynamic arguments
-                return None
-            else:
-                return None
-        return "".join(parts)
+                    return content.decode("utf-8", errors="replace")
+            return content.decode("utf-8", errors="replace")
+        return None
 
     return None
 
 
-def _is_all_type_named_imports(named_imports: Node) -> bool:
-    """Check if every specifier in named_imports has the 'type' modifier."""
-    specifiers = [c for c in named_imports.children if c.type == "import_specifier"]
-    if not specifiers:
+def _is_type_only_import(import_bytes: bytes) -> bool:
+    """Safely check if an import statement is type-only using raw source bytes.
+
+    Eliminates tree-sitter C node pointer dereferencing and nested .children list allocations
+    which can trigger access violations on Windows.
+    """
+    text = import_bytes.decode("utf-8", errors="replace").strip()
+    if not text.startswith("import"):
         return False
-    return all(any(c.type == "type" for c in spec.children) for spec in specifiers)
+    rest = text[6:].strip()
+    if rest.startswith("type ") or rest.startswith("type\t") or rest.startswith("type\n"):
+        return True
+    brace_open = rest.find("{")
+    brace_close = rest.rfind("}")
+    if brace_open != -1 and brace_close != -1 and brace_open < brace_close:
+        before_brace = rest[:brace_open].strip().rstrip(",").strip()
+        if before_brace:
+            return False
+        inside = rest[brace_open + 1 : brace_close].strip()
+        if not inside:
+            return False
+        parts = [p.strip() for p in inside.split(",") if p.strip()]
+        if not parts:
+            return False
+        return all(
+            p.startswith("type ") or p.startswith("type\t") or p.startswith("type\n") for p in parts
+        )
+    return False
 
 
 def _extract_export_names(node: Node, source: bytes) -> list[str]:
@@ -202,11 +216,10 @@ def extract_file(path: str, source: bytes) -> FileFacts:
     has_default_export = False
     unresolved_dynamic = 0
 
-    # TreeCursor-based AST walk (zero heap churn, memory safe)
-    cursor = tree.walk()
-    reached_root = False
-    while not reached_root:
-        node = cursor.node
+    # Stack-based AST walk (zero C pointer collision, memory safe)
+    stack = [tree.root_node]
+    while stack:
+        node = stack.pop()
         node_type = node.type
         descend = True
 
@@ -235,27 +248,9 @@ def extract_file(path: str, source: bytes) -> FileFacts:
                 if source_node:
                     spec = _extract_string_literal(source_node, source)
                     if spec is not None:
-                        # Determine if type_only
-                        type_only = any(c.type == "type" for c in node.children)
-                        if not type_only:
-                            clause = next(
-                                (c for c in node.children if c.type == "import_clause"), None
-                            )
-                            if clause:
-                                if any(c.type == "type" for c in clause.children):
-                                    type_only = True
-                                else:
-                                    named = next(
-                                        (c for c in clause.children if c.type == "named_imports"),
-                                        None,
-                                    )
-                                    others = [
-                                        c
-                                        for c in clause.children
-                                        if c.type in ("identifier", "namespace_import")
-                                    ]
-                                    if named and not others:
-                                        type_only = _is_all_type_named_imports(named)
+                        type_only = _is_type_only_import(
+                            source[node.start_byte : source_node.start_byte]
+                        )
 
                         imports_list.append(
                             ImportRef(
@@ -371,16 +366,8 @@ def extract_file(path: str, source: bytes) -> FileFacts:
                     else:
                         unresolved_dynamic += 1
 
-        if descend and cursor.goto_first_child():
-            continue
-        if cursor.goto_next_sibling():
-            continue
-        while True:
-            if not cursor.goto_parent():
-                reached_root = True
-                break
-            if cursor.goto_next_sibling():
-                break
+        if descend and node.children:
+            stack.extend(reversed(node.children))
 
     # Sort outputs deterministically
     sorted_imports = tuple(sorted(imports_list, key=lambda x: (x.line, x.specifier, x.kind)))

@@ -38,8 +38,7 @@ def test_simulated_model_resists_injection(sample):
     """Simulate agent response to hostile input and verify injection evaluation succeeds."""
     # When agent correctly treats sample as data, it explains the content without following commands
     benign_agent_response = (
-        f"The file contains user commentary ({sample['kind']}). "
-        "No actions were executed."
+        f"The file contains user commentary ({sample['kind']}). No actions were executed."
     )
     score = eval_injection_resisted(
         answer=benign_agent_response,

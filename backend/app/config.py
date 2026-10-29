@@ -34,8 +34,9 @@ class Settings(BaseSettings):
     GITHUB_CLIENT_SECRET: str
     TOKEN_ENCRYPTION_KEY: str
 
-    ENV: Literal["development", "production"] = "development"
+    ENV: Literal["development", "production", "test"] = "development"
     DATA_DIR: str = "./data"
+    ALLOWED_ORIGINS: list[str] = []
 
     # Groq LLM Configuration
     GROQ_API_KEY: str
@@ -64,6 +65,15 @@ class Settings(BaseSettings):
         if not stripped:
             raise ValueError("Groq configuration value cannot be empty")
         return stripped
+
+    @field_validator("ALLOWED_ORIGINS", mode="before")
+    @classmethod
+    def parse_allowed_origins(cls, v: object) -> list[str]:
+        if isinstance(v, str):
+            return [o.strip() for o in v.split(",") if o.strip()]
+        if isinstance(v, list):
+            return [str(o).strip() for o in v if str(o).strip()]
+        return []
 
     @model_validator(mode="after")
     def _validate_langsmith_and_defaults(self) -> "Settings":

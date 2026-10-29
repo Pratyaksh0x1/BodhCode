@@ -243,7 +243,9 @@ async def run_chat_stream(
                 total_completion_tokens += final_result.usage.completion_tokens
             except Exception as exc:
                 logger.warning("Final answer synthesis fallback: %s", exc)
-                accumulated_answer = "Unable to determine further details within the tool execution limit."
+                accumulated_answer = (
+                    "Unable to determine further details within the tool execution limit."
+                )
 
         # Stream the final answer tokens
         # Split into small delta chunks for smooth client rendering

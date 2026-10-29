@@ -84,6 +84,7 @@ async def test_outgoing_translation_preserves_code_and_refs(db_session: Session)
     )
 
     mock_llm = AsyncMock()
+
     # LLM translates the masked template preserving tokens ⟦K0⟧ ...
     async def fake_chat(**kwargs):
         # Inspect incoming prompt to ensure tokens were passed

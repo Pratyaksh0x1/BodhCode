@@ -105,9 +105,7 @@ def test_eval_no_commentary():
     assert eval_no_commentary("यह एक फ़ाइल है।", "This is a file.") == 1.0
 
     # Conversational preamble
-    assert (
-        eval_no_commentary("Here is the translation:\nयह एक फ़ाइल है।", "This is a file.") == 0.0
-    )
+    assert eval_no_commentary("Here is the translation:\nयह एक फ़ाइल है।", "This is a file.") == 0.0
     assert eval_no_commentary("Sure! Here is your translation:\nTexto", "Text") == 0.0
 
     # Excessive length discrepancy

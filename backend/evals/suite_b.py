@@ -48,8 +48,8 @@ function brokenSyntax( {
         + b"// \xf0\x9f\x91\xa8\xe2\x80\x8d\xf0\x9f\x91\xa9\xe2\x80\x8d\xf0\x9f\x91\xa7 emoji\n"
         + b"export const \xc3\xa6_variable = 42;\n"
         + b"// Null \x00 bytes and control \x01\x02 characters\n"
-        + b"export const msg = \"\xe6\x97\xa5\xe6\x9c\xac\xe8\xaa\x9e "
-        + b"\xe0\xa4\xb9\xe0\xa4\xbf\xe0\xa4\xa8\xe0\xa5\x8d\xe0\xa4\xa6\xe0\xa5\x80\";\n"
+        + b'export const msg = "\xe6\x97\xa5\xe6\x9c\xac\xe8\xaa\x9e '
+        + b'\xe0\xa4\xb9\xe0\xa4\xbf\xe0\xa4\xa8\xe0\xa5\x8d\xe0\xa4\xa6\xe0\xa5\x80";\n'
     )
 
     # 6. Unsupported binary file (should flag skipped_unsupported)
@@ -120,7 +120,7 @@ def run_suite_b(repos_dir: Path = REPOS_DIR, max_per_file_ms: float = 5000.0) ->
     max_ms = max(timings_list) if timings_list else 0.0
     avg_ms = sum(timings_list) / len(timings_list) if timings_list else 0.0
 
-    passed = (exceptions_escaped == 0)
+    passed = exceptions_escaped == 0
     metrics = {
         "exceptions_escaped": exceptions_escaped,
         "total_files": total_files,

@@ -28,9 +28,10 @@ def test_suite_a_detects_altered_truth(tmp_path: Path):
     with patch("evals.suite_a.load_truth", return_value=tampered_truth_dict):
         tampered_result = run_suite_a()
         assert tampered_result["passed"] is False
-        assert tampered_result["metrics"]["edge_precision"] < 1.0 or tampered_result["metrics"][
-            "edge_recall"
-        ] < 1.0
+        assert (
+            tampered_result["metrics"]["edge_precision"] < 1.0
+            or tampered_result["metrics"]["edge_recall"] < 1.0
+        )
 
 
 def test_threshold_logic(tmp_path: Path):

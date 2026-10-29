@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import type { ReviewMode } from "../lib/auth";
+import { useDisconnect, type ReviewMode } from "../lib/auth";
 import { getUserActivity } from "../lib/push";
 import { useLanguages, useSettings } from "../lib/settings";
 import {
@@ -28,6 +28,24 @@ export function Settings() {
     queryKey: ["user", "activity"],
     queryFn: () => getUserActivity(50),
   });
+
+  const disconnect = useDisconnect();
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteConfirmationInput, setDeleteConfirmationInput] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const handleConfirmDelete = async () => {
+    if (deleteConfirmationInput.trim() !== "DELETE") return;
+    setIsDeleting(true);
+    setDeleteError(null);
+    try {
+      await disconnect();
+    } catch (err: unknown) {
+      setDeleteError(err instanceof Error ? err.message : "Failed to delete data");
+      setIsDeleting(false);
+    }
+  };
 
   // Searchable language combobox state
   const [langSearch, setLangSearch] = useState("");
@@ -580,6 +598,128 @@ export function Settings() {
           </div>
         )}
       </section>
+ 
+      {/* Privacy & Data Section */}
+      <section className="space-y-4 pt-6 border-t border-neutral-200 dark:border-neutral-800">
+        <div>
+          <h2 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
+            <span>🛡️</span>
+            <span>Privacy & Data</span>
+          </h2>
+          <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+            Understand how BodhCode stores your information, which OAuth scopes are used, and exercise full control over your personal data.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Stored Data Info */}
+          <div className="p-4 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900/50 space-y-3">
+            <h3 className="text-xs font-semibold text-neutral-800 dark:text-neutral-200 uppercase tracking-wider">
+              What Is Stored
+            </h3>
+            <ul className="text-xs text-neutral-600 dark:text-neutral-400 space-y-2 list-disc list-inside">
+              <li><strong className="text-neutral-800 dark:text-neutral-200">Profile:</strong> GitHub login, ID, display name, avatar URL, and verified email.</li>
+              <li><strong className="text-neutral-800 dark:text-neutral-200">OAuth Token:</strong> Encrypted at rest using AES-128-CBC (Fernet). Never logged, sent to browsers, or included in LLM prompts.</li>
+              <li><strong className="text-neutral-800 dark:text-neutral-200">Preferences:</strong> Preferred language, UI theme, editor theme, and review mode.</li>
+              <li><strong className="text-neutral-800 dark:text-neutral-200">Working Copies:</strong> In-browser file edits and unstaged changes for repositories you explore.</li>
+              <li><strong className="text-neutral-800 dark:text-neutral-200">Proposals & Checkpoints:</strong> AI agent edit proposals and rollback snapshots.</li>
+              <li><strong className="text-neutral-800 dark:text-neutral-200">Activity Log:</strong> Audit record of branches, commits, PRs, and issues pushed to GitHub.</li>
+            </ul>
+          </div>
+
+          {/* GitHub OAuth Scopes Info */}
+          <div className="p-4 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900/50 space-y-3">
+            <h3 className="text-xs font-semibold text-neutral-800 dark:text-neutral-200 uppercase tracking-wider">
+              OAuth Scopes & Purpose
+            </h3>
+            <div className="space-y-3 text-xs text-neutral-600 dark:text-neutral-400">
+              <div className="p-2.5 rounded-lg bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-200 dark:border-neutral-700/50">
+                <div className="font-mono text-[11px] font-semibold text-neutral-800 dark:text-neutral-200">read:user, user:email</div>
+                <p className="mt-1 text-[11px]">Default scope requested at sign-in. Used exclusively to authenticate your identity, retrieve your public profile, and access your primary verified email.</p>
+              </div>
+              <div className="p-2.5 rounded-lg bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-200 dark:border-neutral-700/50">
+                <div className="font-mono text-[11px] font-semibold text-neutral-800 dark:text-neutral-200">public_repo (Optional)</div>
+                <p className="mt-1 text-[11px]">Requested strictly on-demand when you explicitly choose to push commits, create new branches, or open pull requests/issues on public repositories.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Delete My Data (Danger Zone) */}
+        <div className="p-4 rounded-xl border border-rose-200 dark:border-rose-900/50 bg-rose-50/30 dark:bg-rose-950/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h3 className="text-xs font-semibold text-rose-700 dark:text-rose-400 uppercase tracking-wider">
+              Danger Zone: Delete My Data
+            </h3>
+            <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1 max-w-xl">
+              Permanently delete your account, encrypted OAuth tokens, repository links, working copies, proposals, rollback checkpoints, and activity logs. Shared public repository caches remain intact.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsDeleteModalOpen(true)}
+            className="px-4 py-2 text-xs font-medium text-white bg-rose-600 hover:bg-rose-700 active:bg-rose-800 rounded-lg shadow-sm transition-colors whitespace-nowrap self-start sm:self-auto cursor-pointer"
+          >
+            Delete my data
+          </button>
+        </div>
+      </section>
+
+      {/* Confirmation Modal */}
+      {isDeleteModalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-modal-title"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
+        >
+          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <h3 id="delete-modal-title" className="text-sm font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
+              <span className="text-rose-500">⚠️</span>
+              <span>Confirm Account & Data Deletion</span>
+            </h3>
+            <p className="text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed">
+              This action is <strong className="text-rose-500">irreversible</strong>. All your personal data, working files, proposals, and tokens will be permanently destroyed.
+            </p>
+            <p className="text-xs text-neutral-700 dark:text-neutral-300">
+              To confirm, type <strong className="font-mono text-rose-500 font-bold select-all">DELETE</strong> below:
+            </p>
+            <input
+              type="text"
+              value={deleteConfirmationInput}
+              onChange={(e) => setDeleteConfirmationInput(e.target.value)}
+              placeholder="Type DELETE to confirm"
+              className="w-full px-3 py-2 text-xs font-mono rounded-lg border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 focus:outline-hidden focus:ring-2 focus:ring-rose-500"
+              autoFocus
+            />
+            {deleteError && (
+              <p className="text-xs text-rose-500 font-medium">{deleteError}</p>
+            )}
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsDeleteModalOpen(false);
+                  setDeleteConfirmationInput("");
+                  setDeleteError(null);
+                }}
+                disabled={isDeleting}
+                className="px-3.5 py-1.5 text-xs text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                disabled={deleteConfirmationInput.trim() !== "DELETE" || isDeleting}
+                className="px-4 py-1.5 text-xs font-medium text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg shadow-sm transition-colors cursor-pointer"
+              >
+                {isDeleting ? "Deleting..." : "Permanently Delete Data"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

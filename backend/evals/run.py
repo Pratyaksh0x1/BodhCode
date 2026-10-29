@@ -85,8 +85,7 @@ def format_table(rows: list[list[str]], headers: list[str]) -> str:
     header_line = " | ".join(h.ljust(col_widths[i]) for i, h in enumerate(headers))
     separator_line = "-+-".join("-" * col_widths[i] for i in range(len(headers)))
     row_lines = [
-        " | ".join(str(cell).ljust(col_widths[i]) for i, cell in enumerate(row))
-        for row in rows
+        " | ".join(str(cell).ljust(col_widths[i]) for i, cell in enumerate(row)) for row in rows
     ]
 
     return f"\n{header_line}\n{separator_line}\n" + "\n".join(row_lines) + "\n"
@@ -185,9 +184,7 @@ def run_all(
     logger.info("Starting BodhCode Evaluation Harness (git sha: %s)", git_sha)
 
     thresholds = load_thresholds(thresholds_path)
-    suites_to_run = (
-        ["A", "B", "C", "D", "E"] if suite_arg.lower() == "all" else [suite_arg.upper()]
-    )
+    suites_to_run = ["A", "B", "C", "D", "E"] if suite_arg.lower() == "all" else [suite_arg.upper()]
 
     all_suites_passed = True
     combined_results: dict[str, Any] = {

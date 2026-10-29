@@ -74,10 +74,8 @@ class RepoLanguageOverrideRequest(BaseModel):
 
 def _get_user_repo(repo_id: int, user: User, session: Session) -> Repo:
     repo = session.get(Repo, repo_id)
-    if not repo:
+    if not repo or repo.user_id != user.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Repository not found")
-    if repo.user_id != user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     return repo
 
 
@@ -488,13 +486,9 @@ async def confirm_push(
                 st = ch["status"]
                 if st in ("added", "modified"):
                     b_sha = await gh_client.create_blob(target_owner, target_name, ch["content"])
-                    tree_entries.append(
-                        {"path": p, "mode": "100644", "type": "blob", "sha": b_sha}
-                    )
+                    tree_entries.append({"path": p, "mode": "100644", "type": "blob", "sha": b_sha})
                 elif st == "deleted":
-                    tree_entries.append(
-                        {"path": p, "mode": "100644", "type": "blob", "sha": None}
-                    )
+                    tree_entries.append({"path": p, "mode": "100644", "type": "blob", "sha": None})
 
             # Create tree
             new_tree_sha = await gh_client.create_tree(

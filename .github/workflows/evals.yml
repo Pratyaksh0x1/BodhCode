@@ -1,0 +1,128 @@
+name: Evals
+
+on:
+  schedule:
+    - cron: "0 2 * * *" # Nightly at 02:00 UTC
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: "Evaluation suite to run (A, B, C, D, E, or all)"
+        required: false
+        default: "all"
+        type: choice
+        options:
+          - all
+          - A
+          - B
+          - C
+          - D
+          - E
+      upload_langsmith:
+        description: "Upload results to LangSmith"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  offline-evals:
+    name: Offline Evals (Suites A, B, E - Zero Secrets)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+          enable-cache: true
+          cache-dependency-glob: "backend/uv.lock"
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Run Suite A (Deterministic graph parsing)
+        run: uv run python -m evals.run --suite A
+
+      - name: Run Suite B (Context budget & graph packing)
+        run: uv run python -m evals.run --suite B
+
+      - name: Run Suite E (Prompt injection regression)
+        run: uv run python -m evals.run --suite E
+
+      - name: Upload offline eval results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: offline-eval-results
+          path: backend/evals/results/
+          if-no-files-found: ignore
+
+  live-evals:
+    name: Live LLM Evals (Suites C, D - Protected Secrets)
+    runs-on: ubuntu-latest
+    # CRITICAL: Only run on trusted schedule/manual dispatch from base repo, NEVER on pull requests from forks
+    if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && github.repository == 'Pratyaksh0x1/BodhCode'
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+          enable-cache: true
+          cache-dependency-glob: "backend/uv.lock"
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Run Live Evaluation Suites
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          LANGSMITH_API_KEY: ${{ secrets.LANGSMITH_API_KEY }}
+          LANGSMITH_TRACING: "true"
+          LANGSMITH_PROJECT: "bodhcode-evals"
+        run: |
+          SUITE_ARG="${{ github.event.inputs.suite || 'all' }}"
+          UPLOAD_FLAG=""
+          if [ "${{ github.event.inputs.upload_langsmith }}" = "true" ]; then
+            UPLOAD_FLAG="--upload"
+          fi
+          if [ "$SUITE_ARG" = "all" ]; then
+            uv run python -m evals.run --suite C $UPLOAD_FLAG
+            uv run python -m evals.run --suite D $UPLOAD_FLAG
+          else
+            uv run python -m evals.run --suite "$SUITE_ARG" $UPLOAD_FLAG
+          fi
+
+      - name: Upload live eval results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-eval-results
+          path: backend/evals/results/
+          if-no-files-found: ignore

@@ -16,8 +16,13 @@ from app.i18n.languages import is_supported
 from app.i18n.translate import translate_many, translate_text
 from app.models.repo import Repo
 from app.models.user import User
+from app.rate_limiter import rate_limit_translations
 
-router = APIRouter(prefix="/repos", tags=["Repository Content"])
+router = APIRouter(
+    prefix="/repos",
+    tags=["Repository Content"],
+    dependencies=[Depends(rate_limit_translations)],
+)
 
 
 class ReadmeResponse(BaseModel):

@@ -87,10 +87,12 @@ def test_repo_with_graph(test_user: User, db_session: Session) -> tuple[Repo, Re
 
 
 @pytest.fixture(autouse=True)
-def override_auth_user(test_user: User):
+def override_auth_user(test_user: User, client: TestClient):
     """Override get_current_user dependency for routes."""
     app.dependency_overrides[get_current_user] = lambda: test_user
+    client.headers["X-Requested-With"] = "bodhcode"
     yield
+    client.headers.pop("X-Requested-With", None)
     app.dependency_overrides.pop(get_current_user, None)
 
 

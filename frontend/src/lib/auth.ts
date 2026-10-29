@@ -55,3 +55,17 @@ export function useLogout() {
     }
   }, [queryClient]);
 }
+
+export function useDisconnect() {
+  const queryClient = useQueryClient();
+
+  return useCallback(async (): Promise<void> => {
+    try {
+      await api<void>("/auth/disconnect", { method: "POST" });
+    } finally {
+      queryClient.setQueryData(AUTH_QUERY_KEY, null);
+      queryClient.clear();
+      window.location.href = "/";
+    }
+  }, [queryClient]);
+}

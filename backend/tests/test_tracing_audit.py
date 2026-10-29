@@ -153,6 +153,7 @@ def test_trace_tags_defaults_and_overrides(monkeypatch):
 
 def test_traced_decorator_preserves_callable_and_tags():
     """Verify @traced decorator wraps cleanly and attaches metadata."""
+
     @traced(name="custom_audit_span", tags=["audit_test"])
     def dummy_func(x: int) -> int:
         return x * 2

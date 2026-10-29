@@ -79,9 +79,7 @@ def run_suite_a(repos_dir: Path = REPOS_DIR) -> dict[str, Any]:
 
         # 2. Edge precision & recall
         actual_edges = set((e.source, e.target, e.kind) for e in doc.edges)
-        expected_edges = set(
-            (e["source"], e["target"], e["kind"]) for e in truth.get("edges", [])
-        )
+        expected_edges = set((e["source"], e["target"], e["kind"]) for e in truth.get("edges", []))
         matched_edges = actual_edges & expected_edges
         missing_edges = expected_edges - actual_edges
         extra_edges = actual_edges - expected_edges
@@ -150,12 +148,8 @@ def run_suite_a(repos_dir: Path = REPOS_DIR) -> dict[str, Any]:
             }
         )
 
-    edge_precision = (
-        total_matched_edges / total_actual_edges if total_actual_edges > 0 else 1.0
-    )
-    edge_recall = (
-        total_matched_edges / total_expected_edges if total_expected_edges > 0 else 1.0
-    )
+    edge_precision = total_matched_edges / total_actual_edges if total_actual_edges > 0 else 1.0
+    edge_recall = total_matched_edges / total_expected_edges if total_expected_edges > 0 else 1.0
 
     metrics = {
         "edge_precision": round(edge_precision, 4),

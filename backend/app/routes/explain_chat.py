@@ -18,7 +18,7 @@ from app.ai.chat import (
     run_chat_stream,
 )
 from app.ai.explain import ExplainResult, explain_file
-from app.auth.deps import get_current_user
+from app.auth.deps import get_current_user, require_csrf_header
 from app.config import get_settings
 from app.db import get_session
 from app.i18n.languages import is_supported
@@ -26,9 +26,14 @@ from app.models.graph import RepoGraph
 from app.models.repo import Repo
 from app.models.user import User
 from app.parser.graph import PARSER_VERSION
+from app.rate_limiter import rate_limit_chat_turn, rate_limit_explain
 from app.routes.graph_cache import get_cached_digraph
 
-router = APIRouter(prefix="/repos", tags=["Explain & Chat"])
+router = APIRouter(
+    prefix="/repos",
+    tags=["Explain & Chat"],
+    dependencies=[Depends(require_csrf_header)],
+)
 
 
 class ExplainRequest(BaseModel):
@@ -86,7 +91,11 @@ def _resolve_language(lang: str | None, user: User) -> str:
     return target
 
 
-@router.post("/{repo_id}/explain", response_model=ExplainResult)
+@router.post(
+    "/{repo_id}/explain",
+    response_model=ExplainResult,
+    dependencies=[Depends(rate_limit_explain)],
+)
 async def explain_file_endpoint(
     repo_id: int,
     payload: ExplainRequest,
@@ -132,7 +141,10 @@ async def explain_file_endpoint(
     )
 
 
-@router.post("/{repo_id}/chat")
+@router.post(
+    "/{repo_id}/chat",
+    dependencies=[Depends(rate_limit_chat_turn)],
+)
 async def chat_endpoint(
     repo_id: int,
     payload: ChatRequest,

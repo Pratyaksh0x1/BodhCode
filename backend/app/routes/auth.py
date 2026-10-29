@@ -3,7 +3,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request, Response, status
 from fastapi.responses import RedirectResponse
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from app.auth.crypto import encrypt_token
 from app.auth.deps import get_current_user, require_csrf_header
@@ -12,14 +12,65 @@ from app.auth.scope import validate_return_to
 from app.auth.service import upsert_github_user
 from app.config import get_settings
 from app.db import get_session
-from app.models.push import ActionLog
+from app.models.files import WorkingFile
+from app.models.graph import RepoGraph
+from app.models.proposals import Checkpoint, Proposal
+from app.models.push import ActionLog, PushPreview
+from app.models.repo import Repo
 from app.models.user import User, UserPublic
+from app.rate_limiter import rate_limit_auth_ip
 
 router = APIRouter(
     prefix="/auth",
     tags=["Auth"],
-    dependencies=[Depends(require_csrf_header)],
+    dependencies=[Depends(require_csrf_header), Depends(rate_limit_auth_ip)],
 )
+
+
+def delete_user_data(session: Session, user: User) -> None:
+    """Delete all personal records, files, proposals, and repo links for a user."""
+    user_id = user.id
+    if not user_id:
+        return
+
+    # Delete ActionLogs
+    action_logs = session.exec(select(ActionLog).where(ActionLog.user_id == user_id)).all()
+    for log in action_logs:
+        session.delete(log)
+
+    # Delete PushPreviews
+    previews = session.exec(select(PushPreview).where(PushPreview.user_id == user_id)).all()
+    for preview in previews:
+        session.delete(preview)
+
+    # Delete Proposals and Checkpoints
+    proposals = session.exec(select(Proposal).where(Proposal.user_id == user_id)).all()
+    for proposal in proposals:
+        if proposal.id is not None:
+            checkpoints = session.exec(
+                select(Checkpoint).where(Checkpoint.proposal_id == proposal.id)
+            ).all()
+            for cp in checkpoints:
+                session.delete(cp)
+        session.delete(proposal)
+
+    # Delete WorkingFiles
+    working_files = session.exec(select(WorkingFile).where(WorkingFile.user_id == user_id)).all()
+    for wf in working_files:
+        session.delete(wf)
+
+    # Delete Repos and RepoGraphs
+    repos = session.exec(select(Repo).where(Repo.user_id == user_id)).all()
+    for repo in repos:
+        if repo.id is not None:
+            graphs = session.exec(select(RepoGraph).where(RepoGraph.repo_id == repo.id)).all()
+            for g in graphs:
+                session.delete(g)
+        session.delete(repo)
+
+    # Delete the user row
+    session.delete(user)
+    session.commit()
 
 
 @router.get("/github/login")
@@ -221,5 +272,22 @@ def get_me(current_user: Annotated[User, Depends(get_current_user)]) -> User:
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
 def logout(request: Request) -> Response:
     """Clear session cookie and invalidate current user session."""
+    request.session.clear()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/disconnect", status_code=status.HTTP_204_NO_CONTENT)
+def disconnect(
+    request: Request,
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[Session, Depends(get_session)],
+) -> Response:
+    """Permanently delete user account and all personal associated records.
+
+    Deletes OAuth tokens, repo links, working files, proposals, previews,
+    and action logs. Clears the session cookie. Shared public-repo cache
+    directories remain intact.
+    """
+    delete_user_data(session, current_user)
     request.session.clear()
     return Response(status_code=status.HTTP_204_NO_CONTENT)

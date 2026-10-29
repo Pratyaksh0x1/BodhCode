@@ -65,10 +65,8 @@ class ActionConfirmRequest(BaseModel):
 
 def _get_user_repo(repo_id: int, user: User, session: Session) -> Repo:
     repo = session.get(Repo, repo_id)
-    if not repo:
+    if not repo or repo.user_id != user.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Repository not found")
-    if repo.user_id != user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     return repo
 
 
@@ -339,8 +337,7 @@ async def preview_create_comment(
             detail={
                 "error": "secret_detected",
                 "message": (
-                    "Blocked: Secret detected in comment text. "
-                    "Please remove before sending."
+                    "Blocked: Secret detected in comment text. Please remove before sending."
                 ),
                 "findings": formatted,
             },

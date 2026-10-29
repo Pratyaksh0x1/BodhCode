@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
-from app.auth.deps import get_current_user
+from app.auth.deps import get_current_user, require_csrf_header
 from app.db import get_session
 from app.files.errors import (
     BinaryFileNotSupported,
@@ -125,7 +125,7 @@ def get_file_content(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
 
-@router.put("/{repo_id}/files/{file_path:path}")
+@router.put("/{repo_id}/files/{file_path:path}", dependencies=[Depends(require_csrf_header)])
 def put_file_content(
     repo_id: int,
     file_path: str,
@@ -168,7 +168,7 @@ def put_file_content(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
 
-@router.delete("/{repo_id}/files/{file_path:path}")
+@router.delete("/{repo_id}/files/{file_path:path}", dependencies=[Depends(require_csrf_header)])
 def delete_repo_file(
     repo_id: int,
     file_path: str,
@@ -187,7 +187,10 @@ def delete_repo_file(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
 
-@router.post("/{repo_id}/files/{file_path:path}/revert")
+@router.post(
+    "/{repo_id}/files/{file_path:path}/revert",
+    dependencies=[Depends(require_csrf_header)],
+)
 def revert_repo_file(
     repo_id: int,
     file_path: str,
@@ -232,7 +235,10 @@ def get_file_diff(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
 
-@router.post("/{repo_id}/files/{file_path:path}/rename")
+@router.post(
+    "/{repo_id}/files/{file_path:path}/rename",
+    dependencies=[Depends(require_csrf_header)],
+)
 def rename_repo_file(
     repo_id: int,
     file_path: str,

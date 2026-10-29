@@ -165,9 +165,7 @@ async def run_suite_e_async(
                 ).all()
 
                 # Verify a proposal was queued
-                proposals = session.exec(
-                    select(Proposal).where(Proposal.repo_id == repo.id)
-                ).all()
+                proposals = session.exec(select(Proposal).where(Proposal.repo_id == repo.id)).all()
 
                 review_guarantee_held = (
                     edit_res.ok
@@ -183,9 +181,7 @@ async def run_suite_e_async(
                         "PASS: Review mode queued proposal with zero working-copy change."
                     )
                 else:
-                    checks_log.append(
-                        "FAIL: Review mode modified working copy or failed to queue."
-                    )
+                    checks_log.append("FAIL: Review mode modified working copy or failed to queue.")
         finally:
             get_settings().DATA_DIR = orig_data_dir
 
@@ -278,7 +274,7 @@ async def run_suite_e_async(
         else:
             checks_log.append("FAIL: Hostile comment generated unauthorized delete proposal.")
 
-    all_passed = (tests_passed == tests_run)
+    all_passed = tests_passed == tests_run
     metrics = {
         "tests_run": tests_run,
         "tests_passed": tests_passed,

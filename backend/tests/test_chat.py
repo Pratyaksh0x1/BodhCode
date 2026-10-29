@@ -8,6 +8,7 @@ import pytest
 from starlette.requests import Request
 
 from app.ai.chat import (
+    MAX_TOOL_STEPS,
     ChatMessage,
     acquire_chat_slot,
     prepare_conversation_history,
@@ -126,7 +127,7 @@ async def test_chat_sse_event_ordering(chat_graph: nx.DiGraph) -> None:
 @pytest.mark.asyncio
 async def test_chat_tool_loop_8_step_cap(chat_graph: nx.DiGraph) -> None:
     """Assert tool execution loop respects the 8-step cap."""
-    # Endless tool calls
+    # Endless tool calls (more than MAX_TOOL_STEPS)
     responses = [
         LLMResult(
             tool_calls=[
@@ -140,12 +141,12 @@ async def test_chat_tool_loop_8_step_cap(chat_graph: nx.DiGraph) -> None:
             model="fake-groq",
             usage=LLMUsage(prompt_tokens=20, completion_tokens=10, total_tokens=30),
         )
-        for i in range(12)
+        for i in range(MAX_TOOL_STEPS + 4)
     ]
     # Add one final text result
     responses.append(
         LLMResult(
-            text="Completed 8 steps.",
+            text="Completed tool loop.",
             latency_ms=10.0,
             model="fake-groq",
             usage=LLMUsage(prompt_tokens=20, completion_tokens=10, total_tokens=30),
@@ -171,7 +172,7 @@ async def test_chat_tool_loop_8_step_cap(chat_graph: nx.DiGraph) -> None:
             events.append(json.loads(sse_chunk[len("data: ") :].strip()))
 
     step_events = [e for e in events if e["type"] == "step"]
-    assert len(step_events) == 8  # Strictly capped at 8!
+    assert len(step_events) == MAX_TOOL_STEPS  # Strictly capped at MAX_TOOL_STEPS!
 
 
 @pytest.mark.asyncio

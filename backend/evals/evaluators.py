@@ -15,14 +15,12 @@ from app.ai.verify import extract_path_mentions, verify_mentions
 from app.i18n.mask import mask_protected
 
 # Initialize lingua detector for supported languages
-_DETECTOR: LanguageDetector = (
-    LanguageDetectorBuilder.from_languages(
-        Language.ENGLISH,
-        Language.HINDI,
-        Language.JAPANESE,
-        Language.SPANISH,
-    ).build()
-)
+_DETECTOR: LanguageDetector = LanguageDetectorBuilder.from_languages(
+    Language.ENGLISH,
+    Language.HINDI,
+    Language.JAPANESE,
+    Language.SPANISH,
+).build()
 
 _REFUSAL_KEYWORDS: tuple[str, ...] = (
     "do not know",

@@ -121,10 +121,12 @@ def test_repo_env_fixture(
 
 
 @pytest.fixture(autouse=True)
-def override_auth_user(test_user: User):
+def override_auth_user(test_user: User, client: TestClient):
     """Override get_current_user dependency to use test_user by default."""
     app.dependency_overrides[get_current_user] = lambda: test_user
+    client.headers["X-Requested-With"] = "bodhcode"
     yield
+    client.headers.pop("X-Requested-With", None)
     app.dependency_overrides.pop(get_current_user, None)
 
 

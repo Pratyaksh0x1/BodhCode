@@ -1,16 +1,19 @@
+import { useRateLimitStore } from "../store/rateLimitStore";
 import { VITE_API_URL } from "./env";
 
 export class ApiError extends Error {
   readonly status: number;
   readonly detail: string;
   readonly body?: unknown;
+  readonly retryAfter?: number;
 
-  constructor(status: number, detail: string, body?: unknown) {
+  constructor(status: number, detail: string, body?: unknown, retryAfter?: number) {
     super(`API Error ${status}: ${detail}`);
     this.name = "ApiError";
     this.status = status;
     this.detail = detail;
     this.body = body;
+    this.retryAfter = retryAfter;
   }
 }
 
@@ -58,7 +61,18 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
         // Fallback to statusText
       }
     }
-    throw new ApiError(response.status, detail, body);
+
+    let retryAfter: number | undefined;
+    if (response.status === 429) {
+      const retryHeader = response.headers.get("Retry-After");
+      retryAfter = retryHeader ? parseInt(retryHeader, 10) : 60;
+      if (isNaN(retryAfter) || retryAfter <= 0) {
+        retryAfter = 60;
+      }
+      useRateLimitStore.getState().triggerRateLimit(retryAfter, detail);
+    }
+
+    throw new ApiError(response.status, detail, body, retryAfter);
   }
 
   if (response.status === 204) {

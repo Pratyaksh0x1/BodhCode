@@ -96,9 +96,7 @@ def extract_path_mentions(text: str) -> list[Mention]:
                 if " " in cand_clean or not cand_clean or _is_url(cand_clean):
                     continue
                 has_slash = "/" in cand_clean or "\\" in cand_clean
-                has_ext = any(
-                    cand_clean.lower().endswith(f".{ext}") for ext in _COMMON_EXTENSIONS
-                )
+                has_ext = any(cand_clean.lower().endswith(f".{ext}") for ext in _COMMON_EXTENSIONS)
                 if has_slash or has_ext:
                     raw_match = match.group("backtick") if len(candidates) == 1 else cand_clean
                     mentions.append(

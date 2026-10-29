@@ -288,17 +288,23 @@ def test_push_preview_edit_and_confirm_flow(
             json={"tree": {"sha": "basetreesha999"}},
         )
         # Blob creation
-        respx.post(f"https://api.github.com/repos/{test_repo.owner}/{test_repo.name}/git/blobs").respond(
+        respx.post(
+            f"https://api.github.com/repos/{test_repo.owner}/{test_repo.name}/git/blobs"
+        ).respond(
             status_code=201,
             json={"sha": "blob111"},
         )
         # Tree creation
-        respx.post(f"https://api.github.com/repos/{test_repo.owner}/{test_repo.name}/git/trees").respond(
+        respx.post(
+            f"https://api.github.com/repos/{test_repo.owner}/{test_repo.name}/git/trees"
+        ).respond(
             status_code=201,
             json={"sha": "newtreesha222"},
         )
         # Commit creation
-        respx.post(f"https://api.github.com/repos/{test_repo.owner}/{test_repo.name}/git/commits").respond(
+        respx.post(
+            f"https://api.github.com/repos/{test_repo.owner}/{test_repo.name}/git/commits"
+        ).respond(
             status_code=201,
             json={"sha": "newcommitsha333"},
         )
@@ -306,7 +312,9 @@ def test_push_preview_edit_and_confirm_flow(
         respx.get(
             f"https://api.github.com/repos/{test_repo.owner}/{test_repo.name}/git/refs/heads/feat-app"
         ).respond(status_code=404)
-        respx.post(f"https://api.github.com/repos/{test_repo.owner}/{test_repo.name}/git/refs").respond(
+        respx.post(
+            f"https://api.github.com/repos/{test_repo.owner}/{test_repo.name}/git/refs"
+        ).respond(
             status_code=201,
             json={"ref": "refs/heads/feat-app", "object": {"sha": "newcommitsha333"}},
         )
@@ -321,7 +329,9 @@ def test_push_preview_edit_and_confirm_flow(
             status_code=200,
             json=[],
         )
-        respx.post(f"https://api.github.com/repos/{test_repo.owner}/{test_repo.name}/pulls").respond(
+        respx.post(
+            f"https://api.github.com/repos/{test_repo.owner}/{test_repo.name}/pulls"
+        ).respond(
             status_code=201,
             json={
                 "html_url": "https://github.com/octocoder/testrepo/pull/1",
@@ -468,7 +478,9 @@ def test_issues_and_comments_flow(
             headers={"x-oauth-scopes": "read:user, public_repo"},
             json={"login": auth_user.login},
         )
-        respx.post(f"https://api.github.com/repos/{test_repo.owner}/{test_repo.name}/issues").respond(
+        respx.post(
+            f"https://api.github.com/repos/{test_repo.owner}/{test_repo.name}/issues"
+        ).respond(
             status_code=201,
             json={"html_url": "https://github.com/octocoder/testrepo/issues/10", "number": 10},
         )

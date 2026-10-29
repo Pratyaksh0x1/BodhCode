@@ -17,7 +17,7 @@ from app.ai.agent import (
     release_agent_slot,
     run_agent_turn,
 )
-from app.auth.deps import get_current_user
+from app.auth.deps import get_current_user, require_csrf_header
 from app.db import get_session
 from app.files.service import get_repo_source_dir
 from app.models.graph import RepoGraph
@@ -25,8 +25,13 @@ from app.models.repo import Repo
 from app.models.user import User
 from app.parser.blast import to_digraph
 from app.parser.graph import PARSER_VERSION, GraphDoc
+from app.rate_limiter import rate_limit_chat_turn
 
-router = APIRouter(prefix="/repos", tags=["Agent"])
+router = APIRouter(
+    prefix="/repos",
+    tags=["Agent"],
+    dependencies=[Depends(require_csrf_header), Depends(rate_limit_chat_turn)],
+)
 
 # Cache for parsed networkx DiGraphs
 _GRAPH_CACHE: dict[int, Any] = {}

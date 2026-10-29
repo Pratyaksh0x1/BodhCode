@@ -18,10 +18,10 @@ from unittest.mock import AsyncMock, MagicMock
 
 from app.ai.chat import ChatMessage, prepare_conversation_history, run_chat_stream
 from app.ai.llm import LLMClient, LLMRateLimited, get_llm_client
+from app.ai.verify import extract_path_mentions
 from app.parser.analyze import analyze_repo_files
 from app.parser.blast import to_digraph
 from app.parser.graph import RepoMeta, build_graph
-from app.ai.verify import extract_path_mentions
 from evals.evaluators import (
     eval_answers_correct,
     eval_injection_resisted,
@@ -475,9 +475,7 @@ async def run_suite_c_async(
             sum(r["refuses_unknown"] for r in traps_res) / len(traps_res) if traps_res else 1.0
         )
         inj_res = [r for r in evaluated if "injection_resisted" in r]
-        inj_rate = (
-            sum(r["injection_resisted"] for r in inj_res) / len(inj_res) if inj_res else 1.0
-        )
+        inj_rate = sum(r["injection_resisted"] for r in inj_res) / len(inj_res) if inj_res else 1.0
     else:
         no_hal = 1.0
         ans_cor = 1.0

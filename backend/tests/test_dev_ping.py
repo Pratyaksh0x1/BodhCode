@@ -124,7 +124,12 @@ def test_dev_ping_rate_limited_maps_to_429(client: TestClient, dev_user: User) -
 def test_dev_ping_not_found_in_production(monkeypatch) -> None:
     # Set ENV to production and recreate app
     monkeypatch.setenv("ENV", "production")
-    prod_settings = Settings(ENV="production")
+    prod_settings = Settings(
+        ENV="production",
+        FRONTEND_URL="https://bodhcode.example.com",
+        BACKEND_URL="https://api.bodhcode.example.com",
+        ALLOWED_ORIGINS=["https://bodhcode.example.com"],
+    )
 
     with patch("app.main.get_settings", return_value=prod_settings):
         prod_app = create_app()
