@@ -27,3 +27,4 @@ describe("EmbeddedBrowser Component", () => {
     expect(screen.queryByText("DOM Element Inspector")).toBeNull();
   });
 });
+

@@ -39,3 +39,4 @@ describe("MultilingualViewer Component", () => {
     expect(screen.getByText(/Grok 120B model support/i)).toBeDefined();
   });
 });
+

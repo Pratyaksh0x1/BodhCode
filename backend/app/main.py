@@ -73,7 +73,13 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # Configure cookie-based session storage
+    # 1. Security headers (nosniff, referrer, Cache-Control: no-store, CSP)
+    app.add_middleware(SecurityHeadersMiddleware)
+
+    # 2. Body size limits (1.5 MB default, 20 KB small)
+    app.add_middleware(RequestBodyLimitMiddleware)
+
+    # 3. Configure cookie-based session storage (must execute before inner endpoints)
     app.add_middleware(
         SessionMiddleware,
         secret_key=settings.APP_SECRET_KEY,
@@ -83,10 +89,20 @@ def create_app() -> FastAPI:
         https_only=(settings.ENV == "production"),
     )
 
-    # Configure strict CORS for frontend integration
+    # 4. Strict CORS (outermost to handle preflight OPTIONS cleanly)
     cors_origins = [settings.FRONTEND_URL] + [
         o for o in settings.ALLOWED_ORIGINS if o != settings.FRONTEND_URL
     ]
+    if settings.ENV == "development":
+        dev_origins = []
+        for origin in cors_origins:
+            if "localhost" in origin:
+                dev_origins.append(origin.replace("localhost", "127.0.0.1"))
+            elif "127.0.0.1" in origin:
+                dev_origins.append(origin.replace("127.0.0.1", "localhost"))
+        cors_origins.extend(dev_origins)
+    cors_origins = list(dict.fromkeys(cors_origins))
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=cors_origins,
@@ -94,12 +110,6 @@ def create_app() -> FastAPI:
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["Content-Type", "X-Requested-With", "If-Match"],
     )
-
-    # Security headers (nosniff, referrer, Cache-Control: no-store, CSP)
-    app.add_middleware(SecurityHeadersMiddleware)
-
-    # Body size limits (1.5 MB default, 20 KB small)
-    app.add_middleware(RequestBodyLimitMiddleware)
 
     @app.exception_handler(ScopeRequiredError)
     async def scope_required_handler(request: Request, exc: ScopeRequiredError) -> JSONResponse:
@@ -122,11 +132,11 @@ def create_app() -> FastAPI:
     app.include_router(content_router)
     app.include_router(explain_chat_router)
     app.include_router(files_router)
+    app.include_router(issues_router)
     app.include_router(meta_router)
     app.include_router(agent_router)
     app.include_router(proposals_router)
     app.include_router(push_router)
-    app.include_router(issues_router)
     app.include_router(activity_router)
     app.include_router(workspace_router)
 

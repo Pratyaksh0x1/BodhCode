@@ -302,10 +302,11 @@ function RepoCard({
   onNavigate,
 }: RepoCardProps) {
   const isConfirmingDelete = confirmDeleteId === repo.id;
-  const isBusy = repo.status === "queued" || repo.status === "fetching";
+  const isBusy = repo.status === "queued" || repo.status === "fetching" || repo.status === "analyzing";
+  const isReady = repo.status === "ready" || repo.status === "fetched";
 
   const handleCardClick = () => {
-    if (repo.status === "fetched") {
+    if (isReady) {
       onNavigate(repo.id);
     }
   };
@@ -315,7 +316,7 @@ function RepoCard({
       id={`repo-card-${repo.id}`}
       onClick={handleCardClick}
       className={`relative p-5 rounded-2xl border transition-all flex flex-col justify-between ${
-        repo.status === "fetched"
+        isReady
           ? "border-slate-800 hover:border-slate-700 bg-slate-900/50 hover:bg-slate-900/80 cursor-pointer shadow-lg hover:shadow-sky-500/5"
           : "border-slate-800/80 bg-slate-900/30"
       }`}
@@ -372,7 +373,7 @@ function RepoCard({
         <span className="text-neutral-500">Updated {formatRelativeTime(repo.updated_at)}</span>
 
         <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-          {repo.status === "fetched" && (
+          {isReady && (
             <Link
               to={`/repos/${repo.id}`}
               id={`open-repo-${repo.id}`}
@@ -469,7 +470,19 @@ function StatusBadge({ repo }: { repo: Repo }) {
     );
   }
 
-  if (repo.status === "fetched") {
+  if (repo.status === "analyzing") {
+    return (
+      <span
+        aria-live="polite"
+        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-950 text-amber-300 border border-amber-800 shrink-0"
+      >
+        <div className="w-2.5 h-2.5 border-2 border-amber-400/40 border-t-amber-400 rounded-full animate-spin" />
+        Analyzing AST...
+      </span>
+    );
+  }
+
+  if (repo.status === "ready" || repo.status === "fetched") {
     return (
       <span
         aria-live="polite"

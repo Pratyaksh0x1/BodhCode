@@ -29,9 +29,11 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         content_type = response.headers.get("content-type", "").lower()
 
         # Cache-Control: no-store on all authenticated JSON responses
-        # (checks for user session or authenticated path structure)
+        # (checks for user session safely without requiring SessionMiddleware on preflights)
+        session = request.scope.get("session")
+        has_session_user = bool(session.get("user_id")) if isinstance(session, dict) else False
         is_authenticated_request = bool(
-            request.session.get("user_id")
+            has_session_user
             or request.url.path.startswith(("/repos", "/auth/me", "/proposals"))
         )
         if is_authenticated_request and "application/json" in content_type:
