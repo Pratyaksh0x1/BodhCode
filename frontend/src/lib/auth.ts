@@ -17,9 +17,42 @@ export interface User {
   review_mode?: ReviewMode;
   grok_configured?: boolean;
   grok_model?: string;
+  github_connected?: boolean;
+  chatgpt_connected?: boolean;
+  openai_model?: string;
+  auth_provider?: "github" | "chatgpt" | "both" | string;
 }
 
 export const AUTH_QUERY_KEY = ["auth", "me"] as const;
+
+export async function pollDesktopAuthTicket(ticket: string): Promise<User | null> {
+  const resp = await api<{ status: string; user?: User }>(`/auth/desktop-poll?ticket=${encodeURIComponent(ticket)}`);
+  if (resp.status === "approved" && resp.user) {
+    return resp.user;
+  }
+  return null;
+}
+
+export function useChatGPTLogin() {
+  const queryClient = useQueryClient();
+
+  return useCallback(
+    async (payload: { apiKey: string; model?: string; ticket?: string }): Promise<User> => {
+      const resp = await api<{ status: string; user: User }>("/auth/chatgpt/login", {
+        method: "POST",
+        body: JSON.stringify({
+          api_key: payload.apiKey,
+          model: payload.model || "gpt-4o",
+          ticket: payload.ticket,
+        }),
+      });
+
+      queryClient.setQueryData(AUTH_QUERY_KEY, resp.user);
+      return resp.user;
+    },
+    [queryClient]
+  );
+}
 
 export function useMe() {
   return useQuery<User | null, Error>({

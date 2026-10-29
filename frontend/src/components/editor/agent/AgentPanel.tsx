@@ -58,6 +58,7 @@ export function AgentPanel({
   const { data: user } = useMe();
   const defaultMode: ReviewMode = (user?.review_mode as ReviewMode) || "review";
   const [reviewMode, setReviewMode] = useState<ReviewMode>(defaultMode);
+  const [agentEngine, setAgentEngine] = useState<"copilot" | "chatgpt" | "grok">("copilot");
 
   // Sync default mode once user loads
   useEffect(() => {
@@ -319,6 +320,18 @@ export function AgentPanel({
 
       {/* Review Mode Selector */}
       <div className="px-3 py-2 bg-neutral-900/60 border-b border-neutral-800 text-xs space-y-1 shrink-0">
+        <div className="flex items-center justify-between gap-2 pb-1 mb-1 border-b border-neutral-800/60">
+          <span className="text-neutral-400 text-[11px] font-medium">AI Engine:</span>
+          <select
+            value={agentEngine}
+            onChange={(e) => setAgentEngine(e.target.value as "copilot" | "chatgpt" | "grok")}
+            className="px-2 py-0.5 rounded bg-neutral-800 border border-neutral-700 text-neutral-200 text-xs focus:outline-none focus:border-orange-500 cursor-pointer"
+          >
+            <option value="copilot">🐙 GitHub Copilot</option>
+            <option value="chatgpt">⚡ ChatGPT / Codex</option>
+            <option value="grok">🧠 Grok 120B</option>
+          </select>
+        </div>
         <div className="flex items-center justify-between gap-2">
           <span className="text-neutral-400 text-[11px] font-medium">Review Mode:</span>
           <select

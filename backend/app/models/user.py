@@ -27,6 +27,9 @@ class User(SQLModel, table=True):
     token_scopes: str = Field(default="read:user,user:email")
     encrypted_grok_key: str | None = Field(default=None)
     grok_model: str = Field(default="gpt-oss-120b")
+    encrypted_openai_key: str | None = Field(default=None)
+    openai_model: str = Field(default="gpt-4o")
+    auth_provider: str = Field(default="github")
     created_at: datetime = Field(default_factory=utc_now)
     last_login_at: datetime = Field(default_factory=utc_now)
 
@@ -34,7 +37,7 @@ class User(SQLModel, table=True):
 class UserPublic(SQLModel):
     """Publicly exposed user details for /auth/me.
 
-    Crucially, encrypted_github_token, encrypted_grok_key, and token_scopes are NEVER included.
+    Crucially, encrypted tokens, grok keys, and token_scopes are NEVER included.
     """
 
     id: int
@@ -48,3 +51,7 @@ class UserPublic(SQLModel):
     review_mode: str = "review"
     grok_configured: bool = False
     grok_model: str = "gpt-oss-120b"
+    github_connected: bool = True
+    chatgpt_connected: bool = False
+    openai_model: str = "gpt-4o"
+    auth_provider: str = "github"

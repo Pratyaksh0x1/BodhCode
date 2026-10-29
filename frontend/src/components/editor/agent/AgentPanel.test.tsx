@@ -125,7 +125,7 @@ describe("Coding Agent Frontend Components", () => {
     );
 
     expect(screen.getByText("BodhCode Agent")).toBeInTheDocument();
-    expect(screen.getByRole("combobox")).toHaveValue("review");
+    expect(screen.getAllByRole("combobox")[1]).toHaveValue("review");
     expect(screen.getByText(/Changes become proposal diffs/)).toBeInTheDocument();
 
     // Selection chip

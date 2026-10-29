@@ -1,8 +1,10 @@
 import json
-from typing import Annotated
+import time
+from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from fastapi.responses import RedirectResponse
+from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
 from app.auth.crypto import encrypt_token
@@ -25,6 +27,16 @@ router = APIRouter(
     tags=["Auth"],
     dependencies=[Depends(require_csrf_header), Depends(rate_limit_auth_ip)],
 )
+
+# In-memory ticket store for Chrome-based desktop authorization
+_DESKTOP_TICKETS: dict[str, dict[str, Any]] = {}
+
+
+def _cleanup_old_tickets() -> None:
+    now = time.time()
+    expired = [k for k, v in _DESKTOP_TICKETS.items() if now - v.get("created_at", 0) > 600]
+    for k in expired:
+        _DESKTOP_TICKETS.pop(k, None)
 
 
 def delete_user_data(session: Session, user: User) -> None:
@@ -74,9 +86,14 @@ def delete_user_data(session: Session, user: User) -> None:
 
 
 @router.get("/github/login")
-async def github_login(request: Request) -> Response:
+async def github_login(request: Request, ticket: str | None = None) -> Response:
     """Redirect to GitHub OAuth authorization screen."""
     settings = get_settings()
+    if ticket:
+        _cleanup_old_tickets()
+        _DESKTOP_TICKETS[ticket] = {"status": "pending", "created_at": time.time()}
+        request.session["desktop_ticket"] = ticket
+
     client = get_oauth().github
     redirect_uri = f"{settings.BACKEND_URL}/auth/github/callback"
     return await client.authorize_redirect(request, redirect_uri)
@@ -241,8 +258,20 @@ async def github_callback(
     )
 
     # Clear old session and set user_id to prevent session fixation attacks
+    desktop_ticket = request.session.pop("desktop_ticket", None)
     request.session.clear()
     request.session["user_id"] = user.id
+
+    if desktop_ticket:
+        _DESKTOP_TICKETS[desktop_ticket] = {
+            "status": "approved",
+            "user_id": user.id,
+            "created_at": time.time(),
+        }
+        return RedirectResponse(
+            url=f"{settings.FRONTEND_URL}/auth/desktop-success?ticket={desktop_ticket}",
+            status_code=status.HTTP_302_FOUND,
+        )
 
     return RedirectResponse(
         url=f"{settings.FRONTEND_URL}/",
@@ -258,6 +287,132 @@ async def github_upgrade_callback(
     """OAuth callback endpoint for upgrade requests."""
     request.session["is_scope_upgrade"] = True
     return await github_callback(request, session)
+
+
+@router.get("/desktop-poll")
+def desktop_poll(
+    request: Request,
+    session: Annotated[Session, Depends(get_session)],
+    ticket: str = Query(description="Desktop OAuth verification ticket"),
+) -> dict[str, Any]:
+    """Poll for approval of a desktop OAuth login initiated via external Chrome browser."""
+    _cleanup_old_tickets()
+    ticket_data = _DESKTOP_TICKETS.get(ticket)
+    if not ticket_data:
+        return {"status": "not_found"}
+
+    if ticket_data.get("status") == "approved":
+        user_id = ticket_data.get("user_id")
+        user = session.get(User, user_id)
+        if user:
+            request.session["user_id"] = user.id
+            return {
+                "status": "approved",
+                "user": UserPublic(
+                    id=user.id,
+                    login=user.login,
+                    name=user.name,
+                    avatar_url=user.avatar_url,
+                    email=user.email,
+                    preferred_language=user.preferred_language,
+                    theme=user.theme,
+                    editor_theme=user.editor_theme,
+                    review_mode=user.review_mode,
+                    grok_configured=bool(user.encrypted_grok_key),
+                    grok_model=user.grok_model or "gpt-oss-120b",
+                    github_connected=bool(user.encrypted_github_token),
+                    chatgpt_connected=bool(user.encrypted_openai_key),
+                    openai_model=user.openai_model or "gpt-4o",
+                    auth_provider=user.auth_provider or "github",
+                ).model_dump(),
+            }
+
+    return {"status": "pending"}
+
+
+class ChatGPTLoginRequest(BaseModel):
+    """Payload to authenticate or connect a ChatGPT / OpenAI Codex account."""
+
+    api_key: str = Field(description="OpenAI API key or ChatGPT session token")
+    model: str = Field(default="gpt-4o", description="Default OpenAI/ChatGPT model")
+    ticket: str | None = Field(default=None, description="Optional desktop ticket ID")
+
+
+@router.post("/chatgpt/login")
+async def chatgpt_login(
+    payload: ChatGPTLoginRequest,
+    request: Request,
+    session: Annotated[Session, Depends(get_session)],
+) -> dict[str, Any]:
+    """Authenticate or connect a ChatGPT / OpenAI Codex account."""
+    api_key = payload.api_key.strip()
+    if not api_key:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="API Key or ChatGPT token is required.",
+        )
+
+    # Check if a user is currently signed in
+    user_id = request.session.get("user_id")
+    current_user = session.get(User, user_id) if user_id else None
+
+    if current_user:
+        # Link ChatGPT account to existing user
+        current_user.encrypted_openai_key = encrypt_token(api_key)
+        current_user.openai_model = payload.model
+        if current_user.auth_provider == "github":
+            current_user.auth_provider = "both"
+        session.add(current_user)
+        session.commit()
+        session.refresh(current_user)
+        user = current_user
+    else:
+        # Create a new ChatGPT/Codex user profile
+        key_preview = api_key[-4:] if len(api_key) >= 4 else "key"
+        new_user = User(
+            github_id=int(time.time() * 1000) % 2147483647,
+            login=f"chatgpt_user_{key_preview}",
+            name="ChatGPT / Codex User",
+            avatar_url="https://chatgpt.com/favicon.ico",
+            encrypted_github_token="",
+            encrypted_openai_key=encrypt_token(api_key),
+            openai_model=payload.model,
+            auth_provider="chatgpt",
+        )
+        session.add(new_user)
+        session.commit()
+        session.refresh(new_user)
+        request.session.clear()
+        request.session["user_id"] = new_user.id
+        user = new_user
+
+    if payload.ticket:
+        _DESKTOP_TICKETS[payload.ticket] = {
+            "status": "approved",
+            "user_id": user.id,
+            "created_at": time.time(),
+        }
+
+    return {
+        "status": "ok",
+        "user": UserPublic(
+            id=user.id,
+            login=user.login,
+            name=user.name,
+            avatar_url=user.avatar_url,
+            email=user.email,
+            preferred_language=user.preferred_language,
+            theme=user.theme,
+            editor_theme=user.editor_theme,
+            review_mode=user.review_mode,
+            grok_configured=bool(user.encrypted_grok_key),
+            grok_model=user.grok_model or "gpt-oss-120b",
+            github_connected=bool(user.encrypted_github_token),
+            chatgpt_connected=bool(user.encrypted_openai_key),
+            openai_model=user.openai_model or "gpt-4o",
+            auth_provider=user.auth_provider or "chatgpt",
+        ).model_dump(),
+    }
 
 
 @router.get("/me", response_model=UserPublic)
@@ -278,6 +433,10 @@ def get_me(current_user: Annotated[User, Depends(get_current_user)]) -> UserPubl
         review_mode=current_user.review_mode,
         grok_configured=bool(current_user.encrypted_grok_key),
         grok_model=current_user.grok_model or "gpt-oss-120b",
+        github_connected=bool(current_user.encrypted_github_token),
+        chatgpt_connected=bool(current_user.encrypted_openai_key),
+        openai_model=current_user.openai_model or "gpt-4o",
+        auth_provider=current_user.auth_provider or "github",
     )
 
 
